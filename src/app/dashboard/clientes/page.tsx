@@ -2,11 +2,11 @@
 
 import api from '@/services/api';
 import { motion } from 'framer-motion';
-import { Building2, Edit, Plus } from 'lucide-react';
+import { Building2, Edit, Eye, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 // Import our reusable components
-import { ClientFormModal } from '@/components/modals/ClientFormModal';
 import { ActiveFilters } from '@/components/ui/ActiveFilters';
 import { Column, DataTable } from '@/components/ui/DataTable';
 import { FilterPanel } from '@/components/ui/FilterPanel';
@@ -61,36 +61,8 @@ interface Cliente {
     }[];
 }
 
-// Interface for new client request payload
-interface ClientePayload {
-    ds_nome: string;
-    ds_razao_social: string;
-    nr_cnpj: string;
-    fl_ativo: boolean;
-    ds_endereco: string;
-    ds_cep: string;
-    ds_uf: string;
-    ds_cidade: string;
-    ds_bairro: string;
-    nr_numero: string;
-    fl_matriz: boolean;
-    ds_situacao: string;
-    // Optional fields
-    ds_site?: string;
-    ds_complemento?: string;
-    nr_inscricao_estadual?: string;
-    tx_observacao_ident?: string;
-    ds_sistema?: string;
-    ds_contrato?: string;
-    nr_nomeados?: number;
-    nr_simultaneos?: number;
-    ds_regiao?: string;
-}
-
-// Modal mode type
-type ModalMode = 'create' | 'edit' | 'view';
-
 export default function Clientes() {
+    const router = useRouter();
     const [clientes, setClientes] = useState<Cliente[]>([]);
     const [filteredClientes, setFilteredClientes] = useState<Cliente[]>([]);
     const [loading, setLoading] = useState(true);
@@ -101,26 +73,22 @@ export default function Clientes() {
     const [matrizFilter, setMatrizFilter] = useState<'todos' | 'matriz' | 'filial'>('todos');
     const [animateItems, setAnimateItems] = useState(false);
 
-    // Modal state
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalMode, setModalMode] = useState<ModalMode>('create');
-    const [currentCliente, setCurrentCliente] = useState<Cliente | null>(null);
-    const [formData, setFormData] = useState<ClientePayload>({
-        ds_nome: '',
-        ds_razao_social: '',
-        nr_cnpj: '',
-        fl_ativo: true,
-        ds_endereco: '',
-        ds_cep: '',
-        ds_uf: '',
-        ds_cidade: '',
-        ds_bairro: '',
-        nr_numero: '',
-        fl_matriz: false,
-        ds_situacao: 'Ativo'
-    });
-    const [formErrors, setFormErrors] = useState<Partial<Record<keyof ClientePayload, string>>>({});
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    // Função para visualizar detalhes do cliente
+    const handleViewClientDetails = (cliente: Cliente) => {
+        // TODO: Implementar visualização detalhada do cliente 
+        // Por enquanto vamos navegar para a tela de edição que já tem os detalhes
+        router.push(`/dashboard/clientes/editar/${cliente.id_cliente}`);
+    };
+
+    // Função para editar cliente
+    const handleEditClient = (cliente: Cliente) => {
+        router.push(`/dashboard/clientes/editar/${cliente.id_cliente}`);
+    };
+
+    // Função para cadastrar novo cliente
+    const handleCreateNewClient = () => {
+        router.push('/dashboard/clientes/cadastro');
+    };
 
     useEffect(() => {
         const fetchClientes = async () => {
@@ -294,30 +262,14 @@ export default function Clientes() {
             )
         },
         {
-            header: 'Razão Social',
-            accessor: 'ds_razao_social',
+            header: 'Sistema',
+            accessor: 'ds_sistema',
             cellRenderer: (value) => (
                 value ? (
-                    <span className="text-gray-800">{value}</span>
+                    <span className="text-gray-700">{value}</span>
                 ) : (
                     <span className="text-gray-400 italic">Não informado</span>
                 )
-            )
-        },
-        {
-            header: 'CNPJ',
-            accessor: 'nr_cnpj',
-            cellRenderer: (value) => (
-                <span className="text-gray-700">{formatCNPJ(value)}</span>
-            )
-        },
-        {
-            header: 'Localização',
-            accessor: (row) => (
-                `${row.ds_cidade}/${row.ds_uf}`
-            ),
-            cellRenderer: (value) => (
-                <span className="text-gray-700">{value}</span>
             )
         },
         {
@@ -332,6 +284,45 @@ export default function Clientes() {
             )
         },
         {
+            header: 'Localização',
+            accessor: (row) => (
+                `${row.ds_cidade}/${row.ds_uf}`
+            ),
+            cellRenderer: (value) => (
+                <span className="text-gray-700">{value}</span>
+            )
+        },
+        {
+            header: 'Situação',
+            accessor: 'ds_situacao',
+            cellRenderer: (value) => {
+                let colorClass = '';
+
+                switch (value?.toLowerCase()) {
+                    case 'implantação':
+                        colorClass = 'bg-amber-100 text-amber-800 border-amber-200';
+                        break;
+                    case 'produção':
+                        colorClass = 'bg-green-100 text-green-800 border-green-200';
+                        break;
+                    case 'restrição':
+                        colorClass = 'bg-orange-100 text-orange-800 border-orange-200';
+                        break;
+                    case 'inativo':
+                        colorClass = 'bg-red-100 text-red-800 border-red-200';
+                        break;
+                    default:
+                        colorClass = 'bg-gray-100 text-gray-800 border-gray-200';
+                }
+
+                return (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClass}`}>
+                        {value || 'Não definido'}
+                    </span>
+                );
+            }
+        },
+        {
             header: 'Tipo',
             accessor: (row) => (
                 row.fl_matriz ? "Matriz" : "Filial"
@@ -344,22 +335,6 @@ export default function Clientes() {
                     {value}
                 </span>
             )
-        },
-        {
-            header: 'Status',
-            accessor: (row) => (
-                row.fl_ativo ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
-                        <span className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></span>
-                        Ativo
-                    </span>
-                ) : (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-                        <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-1.5"></span>
-                        Inativo
-                    </span>
-                )
-            )
         }
     ];
 
@@ -367,27 +342,16 @@ export default function Clientes() {
     const clienteActions = (cliente: Cliente) => (
         <>
             <motion.button
-                onClick={() => {
-                    setCurrentCliente(cliente);
-                    setModalMode('view');
-                    setIsModalOpen(true);
-                }}
+                onClick={() => handleViewClientDetails(cliente)}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.97 }}
                 className="p-1 text-gray-500 rounded hover:bg-gray-100 transition-colors"
                 title="Ver detalhes"
             >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.8" stroke="currentColor" className="w-5 h-5">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c-4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+                <Eye size={18} />
             </motion.button>
             <motion.button
-                onClick={() => {
-                    setCurrentCliente(cliente);
-                    setModalMode('edit');
-                    setIsModalOpen(true);
-                }}
+                onClick={() => handleEditClient(cliente)}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.97 }}
                 className="p-1 text-amber-600 rounded hover:bg-amber-50 transition-colors"
@@ -473,26 +437,19 @@ export default function Clientes() {
                 <motion.button
                     onClick={(e) => {
                         e.stopPropagation();
-                        setCurrentCliente(cliente);
-                        setModalMode('view');
-                        setIsModalOpen(true);
+                        handleViewClientDetails(cliente);
                     }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className="px-3 py-1 text-xs font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 flex items-center gap-1"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor" className="w-3.5 h-3.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c-4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
+                    <Eye size={14} />
                     Ver
                 </motion.button>
                 <motion.button
                     onClick={(e) => {
                         e.stopPropagation();
-                        setCurrentCliente(cliente);
-                        setModalMode('edit');
-                        setIsModalOpen(true);
+                        handleEditClient(cliente);
                     }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -504,27 +461,6 @@ export default function Clientes() {
             </div>
         </div>
     );
-
-    // Create new client handler
-    const handleCreateNewClient = () => {
-        setCurrentCliente(null);
-        setModalMode('create');
-        setFormData({
-            ds_nome: '',
-            ds_razao_social: '',
-            nr_cnpj: '',
-            fl_ativo: true,
-            ds_endereco: '',
-            ds_cep: '',
-            ds_uf: '',
-            ds_cidade: '',
-            ds_bairro: '',
-            nr_numero: '',
-            fl_matriz: false,
-            ds_situacao: 'Ativo'
-        });
-        setIsModalOpen(true);
-    };
 
     // Display full-screen loading spinner while data is being loaded initially
     if (loading && clientes.length === 0) {
@@ -617,20 +553,6 @@ export default function Clientes() {
             <FloatingActionButton
                 icon={<Plus size={24} />}
                 onClick={handleCreateNewClient}
-            />
-
-            {/* Client Form Modal */}
-            <ClientFormModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                mode={modalMode}
-                cliente={currentCliente}
-                formData={formData}
-                setFormData={setFormData}
-                formErrors={formErrors}
-                setFormErrors={setFormErrors}
-                isSubmitting={isSubmitting}
-                setIsSubmitting={setIsSubmitting}
             />
         </div>
     );
