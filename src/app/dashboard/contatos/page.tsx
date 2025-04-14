@@ -5,12 +5,13 @@ import { motion } from 'framer-motion';
 import { Edit, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-// Import our new components
+// Import our components
 import { ContactFormModal } from '@/components/modals/ContactFormModal';
 import { ActiveFilters } from '@/components/ui/ActiveFilters';
 import { Column, DataTable } from '@/components/ui/DataTable';
 import { FilterPanel } from '@/components/ui/FilterPanel';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SearchBar } from '@/components/ui/SearchBar';
 
@@ -489,6 +490,11 @@ export default function Contatos() {
         setIsModalOpen(true);
     };
 
+    // Display full-screen loading spinner while data is being loaded initially
+    if (loading && contacts.length === 0) {
+        return <LoadingSpinner fullScreen text="Carregando contatos..." />;
+    }
+
     return (
         <div className="p-1 sm:p-4 max-w-7xl mx-auto">
             {/* Page header with title and action button */}
@@ -551,6 +557,7 @@ export default function Contatos() {
                     keyField="id_contato"
                     isLoading={loading}
                     error={error}
+                    loadingComponent={<LoadingSpinner size="medium" color="primary" text="Carregando..." />}
                     rowActions={contactActions}
                     mobileCardRenderer={renderMobileContactCard}
                     animationEnabled={animateItems}

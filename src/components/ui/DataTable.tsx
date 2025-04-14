@@ -15,6 +15,7 @@ interface DataTableProps<T> {
     keyField: keyof T;
     isLoading?: boolean;
     error?: string | null;
+    loadingComponent?: ReactNode;
     emptyState?: {
         icon?: ReactNode;
         title: string;
@@ -41,6 +42,7 @@ export function DataTable<T>({
     keyField,
     isLoading = false,
     error = null,
+    loadingComponent,
     emptyState,
     rowActions,
     onRowClick,
@@ -48,6 +50,10 @@ export function DataTable<T>({
     animationEnabled = true,
 }: DataTableProps<T>) {
     if (isLoading) {
+        if (loadingComponent) {
+            return <div className="p-4">{loadingComponent}</div>;
+        }
+
         return (
             <div className="p-10 sm:p-12 text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-2 border-t-2 border-b-2 border-[#09A08D] mx-auto"></div>
