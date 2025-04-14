@@ -71,7 +71,7 @@ export default function DashboardLayout({
                     className={`
                         flex-1 transition-all duration-300 ease-in-out 
                         overflow-auto h-[calc(100vh-64px)] w-full
-                        ${collapsed ? 'lg:ml-20 pl-0' : 'lg:ml-72 pl-0'}
+                        ${collapsed ? 'lg:ml-0 pl-0' : 'lg:ml-4 pl-0'}
                         ${isFullscreen ? 'ml-0' : ''}
                     `}
                 >
