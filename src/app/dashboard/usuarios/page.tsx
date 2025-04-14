@@ -6,6 +6,7 @@ import { Edit, Plus, UserCog } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Import our reusable components
+import { UserFormModal } from '@/components/modals/UserFormModal';
 import { ActiveFilters } from '@/components/ui/ActiveFilters';
 import { Column, DataTable } from '@/components/ui/DataTable';
 import { FilterPanel } from '@/components/ui/FilterPanel';
@@ -19,6 +20,7 @@ interface Usuario {
     nome: string;
     email: string;
     funcao: string;
+    fl_ativo: boolean;
 }
 
 // Interface for new user request payload
@@ -27,6 +29,7 @@ interface UsuarioPayload {
     email: string;
     funcao: string;
     senha?: string;
+    fl_ativo: boolean;
 }
 
 // Modal mode type
@@ -39,60 +42,87 @@ export default function Usuarios() {
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [funcaoFilter, setFuncaoFilter] = useState<'todos' | 'admin' | 'operador' | 'consultor'>('todos');
+    const [statusFilter, setStatusFilter] = useState<'todos' | 'ativo' | 'inativo'>('todos');
     const [animateItems, setAnimateItems] = useState(false);
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<ModalMode>('create');
     const [currentUsuario, setCurrentUsuario] = useState<Usuario | null>(null);
-    const [formData, setFormData] = useState<UsuarioPayload>({
-        nome: '',
-        email: '',
-        funcao: 'operador'
+
+    // Toast notification state
+    const [notification, setNotification] = useState<{
+        message: string;
+        type: 'success' | 'error';
+        visible: boolean;
+    }>({
+        message: '',
+        type: 'success',
+        visible: false
     });
-    const [formErrors, setFormErrors] = useState<Partial<Record<keyof UsuarioPayload, string>>>({});
-    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        const fetchUsuarios = async () => {
-            try {
-                setLoading(true);
-                const response = await api.get('/usuarios');
-                setUsuarios(response.data);
-                setFilteredUsuarios(response.data);
-                setError(null);
-
-                // Trigger animation after data loads
-                setTimeout(() => setAnimateItems(true), 100);
-            } catch (err) {
-                console.error('Erro ao buscar usuários:', err);
-                setError('Não foi possível carregar os usuários. Tente novamente mais tarde.');
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchUsuarios();
     }, []);
 
+    // Função para buscar os usuários da API
+    const fetchUsuarios = async () => {
+        try {
+            setLoading(true);
+            const response = await api.get('/usuarios');
+            setUsuarios(response.data);
+            setFilteredUsuarios(response.data);
+            setError(null);
+
+            // Trigger animation after data loads
+            setTimeout(() => setAnimateItems(true), 100);
+        } catch (err) {
+            console.error('Erro ao buscar usuários:', err);
+            setError('Não foi possível carregar os usuários. Tente novamente mais tarde.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Função para mostrar notificações toast
+    const showNotification = (message: string, type: 'success' | 'error') => {
+        setNotification({
+            message,
+            type,
+            visible: true
+        });
+
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            setNotification(prev => ({ ...prev, visible: false }));
+        }, 5000);
+    };
+
     const handleSearch = (term: string) => {
         setSearchTerm(term);
-        filterUsuarios(term, funcaoFilter);
+        filterUsuarios(term, funcaoFilter, statusFilter);
     };
 
     const handleFuncaoFilter = (funcao: 'todos' | 'admin' | 'operador' | 'consultor') => {
         setFuncaoFilter(funcao);
-        filterUsuarios(searchTerm, funcao);
+        filterUsuarios(searchTerm, funcao, statusFilter);
+    };
+
+    const handleStatusFilter = (status: 'todos' | 'ativo' | 'inativo') => {
+        setStatusFilter(status);
+        filterUsuarios(searchTerm, funcaoFilter, status);
     };
 
     const clearFilters = () => {
         setFuncaoFilter('todos');
-        filterUsuarios(searchTerm, 'todos');
+        setStatusFilter('todos');
+        filterUsuarios(searchTerm, 'todos', 'todos');
     };
 
     const filterUsuarios = (
         term: string,
-        funcao: 'todos' | 'admin' | 'operador' | 'consultor'
+        funcao: 'todos' | 'admin' | 'operador' | 'consultor',
+        status: 'todos' | 'ativo' | 'inativo'
     ) => {
         // Trigger fade-out animation
         setAnimateItems(false);
@@ -111,10 +141,34 @@ export default function Usuarios() {
                 filtered = filtered.filter(usuario => usuario.funcao === funcao);
             }
 
+            if (status !== 'todos') {
+                filtered = filtered.filter(usuario =>
+                    (status === 'ativo' ? usuario.fl_ativo : !usuario.fl_ativo)
+                );
+            }
+
             setFilteredUsuarios(filtered);
             // Trigger fade-in animation
             setTimeout(() => setAnimateItems(true), 100);
         }, 200);
+    };
+
+    // Handler para criar novo usuário 
+    const handleCreateNewUser = () => {
+        setCurrentUsuario(null);
+        setModalMode('create');
+        setIsModalOpen(true);
+    };
+
+    // Handler para sucesso nas operações do modal
+    const handleModalSuccess = (message: string) => {
+        showNotification(message, 'success');
+        fetchUsuarios(); // Recarrega a lista de usuários
+    };
+
+    // Handler para erros nas operações do modal
+    const handleModalError = (message: string) => {
+        showNotification(message, 'error');
     };
 
     // Create active filters array
@@ -125,6 +179,12 @@ export default function Usuarios() {
                 funcaoFilter === 'operador' ? 'Operador' : 'Consultor',
             type: 'feature' as const,
             onRemove: () => handleFuncaoFilter('todos')
+        }] : []),
+        ...(statusFilter !== 'todos' ? [{
+            id: 'status',
+            label: statusFilter === 'ativo' ? 'Ativo' : 'Inativo',
+            type: 'feature' as const,
+            onRemove: () => handleStatusFilter('todos')
         }] : [])
     ];
 
@@ -141,6 +201,17 @@ export default function Usuarios() {
             ],
             currentValue: funcaoFilter,
             onChange: handleFuncaoFilter
+        },
+        {
+            name: 'Status',
+            type: 'multi-toggle' as const,
+            options: [
+                { id: 'todos', label: 'Todos', value: 'todos' },
+                { id: 'ativo', label: 'Ativo', value: 'ativo' },
+                { id: 'inativo', label: 'Inativo', value: 'inativo' }
+            ],
+            currentValue: statusFilter,
+            onChange: handleStatusFilter
         }
     ];
 
@@ -180,6 +251,18 @@ export default function Usuarios() {
                         badgeClasses += "bg-gray-100 text-gray-800 border border-gray-200";
                         return <span className={badgeClasses}>{value}</span>;
                 }
+            }
+        },
+        {
+            header: 'Status',
+            accessor: 'fl_ativo',
+            cellRenderer: (value) => {
+                const badgeClasses = `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${value
+                        ? "bg-green-100 text-green-800 border border-green-200"
+                        : "bg-red-100 text-red-800 border border-red-200"
+                    }`;
+
+                return <span className={badgeClasses}>{value ? 'Ativo' : 'Inativo'}</span>;
             }
         }
     ];
@@ -241,6 +324,11 @@ export default function Usuarios() {
                 roleBadgeClasses += "bg-gray-100 text-gray-800 border border-gray-200";
         }
 
+        const statusBadgeClasses = `inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${usuario.fl_ativo
+                ? "bg-green-100 text-green-800 border border-green-200"
+                : "bg-red-100 text-red-800 border border-red-200"
+            }`;
+
         return (
             <div className="p-4">
                 <div className="flex justify-between items-start">
@@ -248,9 +336,12 @@ export default function Usuarios() {
                         <h3 className="font-medium text-gray-900">{usuario.nome}</h3>
                         <p className="text-sm text-gray-500 mt-1">{usuario.email}</p>
                     </div>
-                    <div className="ml-2">
+                    <div className="ml-2 flex flex-col gap-1 items-end">
                         <span className={roleBadgeClasses}>
                             {roleLabel}
+                        </span>
+                        <span className={statusBadgeClasses}>
+                            {usuario.fl_ativo ? 'Ativo' : 'Inativo'}
                         </span>
                     </div>
                 </div>
@@ -290,18 +381,6 @@ export default function Usuarios() {
                 </div>
             </div>
         );
-    };
-
-    // Create new user handler
-    const handleCreateNewUser = () => {
-        setCurrentUsuario(null);
-        setModalMode('create');
-        setFormData({
-            nome: '',
-            email: '',
-            funcao: 'operador',
-        });
-        setIsModalOpen(true);
     };
 
     return (
@@ -391,7 +470,38 @@ export default function Usuarios() {
                 onClick={handleCreateNewUser}
             />
 
-            {/* Modal components will be implemented later */}
+            {/* Toast Notification */}
+            {notification.visible && (
+                <div
+                    className={`fixed bottom-5 right-5 p-4 rounded-lg shadow-lg max-w-xs z-50 transition-all duration-300 transform translate-y-0 opacity-100
+                        ${notification.type === 'success' ?
+                            'bg-green-100 border border-green-200 text-green-800' :
+                            'bg-red-100 border border-red-200 text-red-800'}`}
+                >
+                    <div className="flex items-center">
+                        {notification.type === 'success' ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                        )}
+                        <span className="text-sm font-medium">{notification.message}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* User Form Modal */}
+            <UserFormModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                modalMode={modalMode}
+                currentUser={currentUsuario}
+                onSuccess={handleModalSuccess}
+                onError={handleModalError}
+            />
         </div>
     );
 }

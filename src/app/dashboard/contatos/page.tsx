@@ -493,7 +493,7 @@ export default function Contatos() {
             {/* Page header with title and action button */}
             <PageHeader
                 title="Contatos"
-                description="Gerenciamento de contatos e clientes"
+                description="Gerenciamento de contatos"
                 actionButton={
                     <motion.button
                         whileHover={{ scale: 1.03 }}
