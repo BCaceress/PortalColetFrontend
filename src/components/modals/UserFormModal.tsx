@@ -56,6 +56,24 @@ export function UserFormModal({
   // Loading state for form submission
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Custom onClose handler that resets form data and errors
+  const handleClose = () => {
+    // Reset to initial state if in create mode
+    if (modalMode === 'create') {
+      setFormData({
+        nome: '',
+        email: '',
+        funcao: '',
+        senha: '',
+        fl_ativo: true
+      });
+    }
+    // Reset validation errors
+    setFormErrors({});
+    // Call original onClose
+    onClose();
+  };
+
   // Initialize form data when modal opens or user changes
   useEffect(() => {
     if (currentUser && (modalMode === 'edit' || modalMode === 'view')) {
@@ -238,7 +256,7 @@ export function UserFormModal({
   return (
     <FormModal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title={getModalTitle()}
       size="md"
       mode={modalMode}
@@ -266,10 +284,10 @@ export function UserFormModal({
               <h3 className="text-xl font-bold text-gray-800 mb-1 text-center">{formData.nome}</h3>
               <div className="flex items-center gap-2 mb-3">
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${formData.funcao === 'Administrador' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
-                    formData.funcao === 'Analista' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
-                      formData.funcao === 'Desenvolvedor' ? 'bg-teal-100 text-teal-800 border border-teal-200' :
-                        formData.funcao === 'Implantador' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
-                          'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                  formData.funcao === 'Analista' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                    formData.funcao === 'Desenvolvedor' ? 'bg-teal-100 text-teal-800 border border-teal-200' :
+                      formData.funcao === 'Implantador' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                        'bg-indigo-100 text-indigo-800 border border-indigo-200'
                   }`}>
                   {formData.funcao || 'Sem função definida'}
                 </span>
@@ -441,7 +459,7 @@ export function UserFormModal({
             {/* Cancel button */}
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isSubmitting}
               className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-all duration-200"
             >

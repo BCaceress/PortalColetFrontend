@@ -92,6 +92,33 @@ export function ClientFormModal({
         }
     }, [isOpen]);
 
+    // Custom onClose handler that resets form data and errors
+    const handleClose = () => {
+        // Reset to initial state
+        if (mode === 'create') {
+            setFormData({
+                ds_nome: '',
+                ds_razao_social: '',
+                nr_cnpj: '',
+                fl_ativo: true,
+                ds_endereco: '',
+                ds_cep: '',
+                ds_uf: '',
+                ds_cidade: '',
+                ds_bairro: '',
+                nr_numero: '',
+                fl_matriz: false,
+                ds_situacao: 'Ativo'
+            });
+        }
+        // Reset validation errors
+        setFormErrors({});
+        // Reset step
+        setCurrentStep('identificacao');
+        // Call original onClose
+        onClose();
+    };
+
     // Handle input changes
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
@@ -421,27 +448,28 @@ export function ClientFormModal({
                     <>
                         {/* Status (ativo/inativo) - apenas para edição */}
                         {mode === 'edit' && (
-                            <div className="flex items-center mb-5">
-                                <input
-                                    id="fl_ativo"
-                                    name="fl_ativo"
-                                    type="checkbox"
-                                    checked={formData.fl_ativo}
-                                    onChange={handleCheckboxChange}
-                                    disabled={isSubmitting || mode === 'view'}
-                                    className="h-4 w-4 text-emerald-500 border-gray-300 rounded focus:ring-emerald-500"
-                                />
-                                <label htmlFor="fl_ativo" className="ml-2 block text-sm text-gray-700">
-                                    Cliente ativo
-                                </label>
+                            <div className="flex items-center mb-6">
+                                <div className="relative inline-flex items-center">
+                                    <input
+                                        id="fl_ativo"
+                                        name="fl_ativo"
+                                        type="checkbox"
+                                        checked={formData.fl_ativo}
+                                        onChange={handleCheckboxChange}
+                                        disabled={isSubmitting || mode === 'view'}
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-emerald-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                                    <span className="ml-3 text-sm font-medium text-gray-700">Cliente ativo</span>
+                                </div>
                             </div>
                         )}
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                             {/* Nome da Empresa */}
                             <div className="relative md:col-span-2">
-                                <label htmlFor="ds_nome" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                                    Nome da Empresa <span className="text-red-500 ml-1">*</span>
+                                <label htmlFor="ds_nome" className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Nome da Empresa <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -454,17 +482,17 @@ export function ClientFormModal({
                                     placeholder="Nome da empresa"
                                 />
                                 {formErrors.ds_nome && (
-                                    <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                        <ShieldAlert size={16} className="mr-1" />
-                                        {formErrors.ds_nome}
+                                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                                        <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
+                                        <span>{formErrors.ds_nome}</span>
                                     </p>
                                 )}
                             </div>
 
                             {/* Razão Social */}
                             <div className="relative md:col-span-2">
-                                <label htmlFor="ds_razao_social" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                                    Razão Social <span className="text-red-500 ml-1">*</span>
+                                <label htmlFor="ds_razao_social" className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Razão Social <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -477,17 +505,17 @@ export function ClientFormModal({
                                     placeholder="Razão social da empresa"
                                 />
                                 {formErrors.ds_razao_social && (
-                                    <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                        <ShieldAlert size={16} className="mr-1" />
-                                        {formErrors.ds_razao_social}
+                                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                                        <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
+                                        <span>{formErrors.ds_razao_social}</span>
                                     </p>
                                 )}
                             </div>
 
                             {/* CNPJ */}
                             <div className="relative">
-                                <label htmlFor="nr_cnpj" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                                    CNPJ <span className="text-red-500 ml-1">*</span>
+                                <label htmlFor="nr_cnpj" className="text-sm font-medium text-gray-700 mb-1 block">
+                                    CNPJ <span className="text-red-500">*</span>
                                 </label>
                                 <input
                                     type="text"
@@ -501,16 +529,16 @@ export function ClientFormModal({
                                     maxLength={18}
                                 />
                                 {formErrors.nr_cnpj && (
-                                    <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                        <ShieldAlert size={16} className="mr-1" />
-                                        {formErrors.nr_cnpj}
+                                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                                        <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
+                                        <span>{formErrors.nr_cnpj}</span>
                                     </p>
                                 )}
                             </div>
 
                             {/* Inscrição Estadual */}
                             <div className="relative">
-                                <label htmlFor="nr_inscricao_estadual" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
+                                <label htmlFor="nr_inscricao_estadual" className="text-sm font-medium text-gray-700 mb-1 block">
                                     Inscrição Estadual
                                 </label>
                                 <input
@@ -524,32 +552,37 @@ export function ClientFormModal({
                                     placeholder="Inscrição estadual"
                                 />
                                 {formErrors.nr_inscricao_estadual && (
-                                    <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                        <ShieldAlert size={16} className="mr-1" />
-                                        {formErrors.nr_inscricao_estadual}
+                                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                                        <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
+                                        <span>{formErrors.nr_inscricao_estadual}</span>
                                     </p>
                                 )}
                             </div>
 
                             {/* Site */}
                             <div className="relative md:col-span-2">
-                                <label htmlFor="ds_site" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
+                                <label htmlFor="ds_site" className="text-sm font-medium text-gray-700 mb-1 block">
                                     Site
                                 </label>
-                                <input
-                                    type="text"
-                                    id="ds_site"
-                                    name="ds_site"
-                                    value={formData.ds_site || ''}
-                                    onChange={handleChange}
-                                    disabled={isSubmitting || mode === 'view'}
-                                    className={getInputClasses('ds_site')}
-                                    placeholder="www.empresa.com.br"
-                                />
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-400">
+                                        <span>https://</span>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        id="ds_site"
+                                        name="ds_site"
+                                        value={formData.ds_site || ''}
+                                        onChange={handleChange}
+                                        disabled={isSubmitting || mode === 'view'}
+                                        className={`${getInputClasses('ds_site')} pl-16`}
+                                        placeholder="www.empresa.com.br"
+                                    />
+                                </div>
                                 {formErrors.ds_site && (
-                                    <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                        <ShieldAlert size={16} className="mr-1" />
-                                        {formErrors.ds_site}
+                                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                                        <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
+                                        <span>{formErrors.ds_site}</span>
                                     </p>
                                 )}
                             </div>
@@ -558,11 +591,11 @@ export function ClientFormModal({
                 );
             case 'endereco':
                 return (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
                         {/* CEP */}
                         <div className="relative">
-                            <label htmlFor="ds_cep" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                                CEP <span className="text-red-500 ml-1">*</span>
+                            <label htmlFor="ds_cep" className="text-sm font-medium text-gray-700 mb-1 block">
+                                CEP <span className="text-red-500">*</span>
                             </label>
                             <div className="relative">
                                 <input
@@ -577,71 +610,80 @@ export function ClientFormModal({
                                     maxLength={9}
                                 />
                                 {isSearchingCEP && (
-                                    <Loader2 size={16} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin" />
+                                    <div className="absolute inset-y-0 right-3 flex items-center">
+                                        <Loader2 size={16} className="text-gray-400 animate-spin" />
+                                    </div>
                                 )}
                             </div>
                             {formErrors.ds_cep && (
-                                <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                    <ShieldAlert size={16} className="mr-1" />
-                                    {formErrors.ds_cep}
+                                <p className="mt-1 text-sm text-red-600 flex items-center">
+                                    <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
+                                    <span>{formErrors.ds_cep}</span>
                                 </p>
                             )}
                         </div>
 
                         {/* UF */}
                         <div className="relative">
-                            <label htmlFor="ds_uf" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                                UF <span className="text-red-500 ml-1">*</span>
+                            <label htmlFor="ds_uf" className="text-sm font-medium text-gray-700 mb-1 block">
+                                UF <span className="text-red-500">*</span>
                             </label>
-                            <select
-                                id="ds_uf"
-                                name="ds_uf"
-                                value={formData.ds_uf}
-                                onChange={handleChange}
-                                disabled={isSubmitting || mode === 'view'}
-                                className={getInputClasses('ds_uf')}
-                            >
-                                <option value="">Selecione</option>
-                                <option value="AC">Acre</option>
-                                <option value="AL">Alagoas</option>
-                                <option value="AP">Amapá</option>
-                                <option value="AM">Amazonas</option>
-                                <option value="BA">Bahia</option>
-                                <option value="CE">Ceará</option>
-                                <option value="DF">Distrito Federal</option>
-                                <option value="ES">Espírito Santo</option>
-                                <option value="GO">Goiás</option>
-                                <option value="MA">Maranhão</option>
-                                <option value="MT">Mato Grosso</option>
-                                <option value="MS">Mato Grosso do Sul</option>
-                                <option value="MG">Minas Gerais</option>
-                                <option value="PA">Pará</option>
-                                <option value="PB">Paraíba</option>
-                                <option value="PR">Paraná</option>
-                                <option value="PE">Pernambuco</option>
-                                <option value="PI">Piauí</option>
-                                <option value="RJ">Rio de Janeiro</option>
-                                <option value="RN">Rio Grande do Norte</option>
-                                <option value="RS">Rio Grande do Sul</option>
-                                <option value="RO">Rondônia</option>
-                                <option value="RR">Roraima</option>
-                                <option value="SC">Santa Catarina</option>
-                                <option value="SP">São Paulo</option>
-                                <option value="SE">Sergipe</option>
-                                <option value="TO">Tocantins</option>
-                            </select>
+                            <div className="relative">
+                                <select
+                                    id="ds_uf"
+                                    name="ds_uf"
+                                    value={formData.ds_uf}
+                                    onChange={handleChange}
+                                    disabled={isSubmitting || mode === 'view'}
+                                    className={getInputClasses('ds_uf')}
+                                >
+                                    <option value="">Selecione</option>
+                                    <option value="AC">Acre</option>
+                                    <option value="AL">Alagoas</option>
+                                    <option value="AP">Amapá</option>
+                                    <option value="AM">Amazonas</option>
+                                    <option value="BA">Bahia</option>
+                                    <option value="CE">Ceará</option>
+                                    <option value="DF">Distrito Federal</option>
+                                    <option value="ES">Espírito Santo</option>
+                                    <option value="GO">Goiás</option>
+                                    <option value="MA">Maranhão</option>
+                                    <option value="MT">Mato Grosso</option>
+                                    <option value="MS">Mato Grosso do Sul</option>
+                                    <option value="MG">Minas Gerais</option>
+                                    <option value="PA">Pará</option>
+                                    <option value="PB">Paraíba</option>
+                                    <option value="PR">Paraná</option>
+                                    <option value="PE">Pernambuco</option>
+                                    <option value="PI">Piauí</option>
+                                    <option value="RJ">Rio de Janeiro</option>
+                                    <option value="RN">Rio Grande do Norte</option>
+                                    <option value="RS">Rio Grande do Sul</option>
+                                    <option value="RO">Rondônia</option>
+                                    <option value="RR">Roraima</option>
+                                    <option value="SC">Santa Catarina</option>
+                                    <option value="SP">São Paulo</option>
+                                    <option value="SE">Sergipe</option>
+                                    <option value="TO">Tocantins</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </div>
+                            </div>
                             {formErrors.ds_uf && (
-                                <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                    <ShieldAlert size={16} className="mr-1" />
-                                    {formErrors.ds_uf}
+                                <p className="mt-1 text-sm text-red-600 flex items-center">
+                                    <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
+                                    <span>{formErrors.ds_uf}</span>
                                 </p>
                             )}
                         </div>
 
                         {/* Cidade */}
                         <div className="relative">
-                            <label htmlFor="ds_cidade" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                                Cidade <span className="text-red-500 ml-1">*</span>
+                            <label htmlFor="ds_cidade" className="text-sm font-medium text-gray-700 mb-1 block">
+                                Cidade <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
@@ -654,17 +696,17 @@ export function ClientFormModal({
                                 placeholder="Cidade"
                             />
                             {formErrors.ds_cidade && (
-                                <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                    <ShieldAlert size={16} className="mr-1" />
-                                    {formErrors.ds_cidade}
+                                <p className="mt-1 text-sm text-red-600 flex items-center">
+                                    <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
+                                    <span>{formErrors.ds_cidade}</span>
                                 </p>
                             )}
                         </div>
 
                         {/* Endereço */}
                         <div className="relative md:col-span-2">
-                            <label htmlFor="ds_endereco" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                                Endereço <span className="text-red-500 ml-1">*</span>
+                            <label htmlFor="ds_endereco" className="text-sm font-medium text-gray-700 mb-1 block">
+                                Endereço <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
@@ -677,17 +719,17 @@ export function ClientFormModal({
                                 placeholder="Rua, Avenida, Logradouro"
                             />
                             {formErrors.ds_endereco && (
-                                <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                    <ShieldAlert size={16} className="mr-1" />
-                                    {formErrors.ds_endereco}
+                                <p className="mt-1 text-sm text-red-600 flex items-center">
+                                    <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
+                                    <span>{formErrors.ds_endereco}</span>
                                 </p>
                             )}
                         </div>
 
                         {/* Número */}
                         <div className="relative">
-                            <label htmlFor="nr_numero" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                                Número <span className="text-red-500 ml-1">*</span>
+                            <label htmlFor="nr_numero" className="text-sm font-medium text-gray-700 mb-1 block">
+                                Número <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
@@ -700,17 +742,17 @@ export function ClientFormModal({
                                 placeholder="Número"
                             />
                             {formErrors.nr_numero && (
-                                <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                    <ShieldAlert size={16} className="mr-1" />
-                                    {formErrors.nr_numero}
+                                <p className="mt-1 text-sm text-red-600 flex items-center">
+                                    <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
+                                    <span>{formErrors.nr_numero}</span>
                                 </p>
                             )}
                         </div>
 
                         {/* Bairro */}
                         <div className="relative">
-                            <label htmlFor="ds_bairro" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                                Bairro <span className="text-red-500 ml-1">*</span>
+                            <label htmlFor="ds_bairro" className="text-sm font-medium text-gray-700 mb-1 block">
+                                Bairro <span className="text-red-500">*</span>
                             </label>
                             <input
                                 type="text"
@@ -723,16 +765,16 @@ export function ClientFormModal({
                                 placeholder="Bairro"
                             />
                             {formErrors.ds_bairro && (
-                                <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                    <ShieldAlert size={16} className="mr-1" />
-                                    {formErrors.ds_bairro}
+                                <p className="mt-1 text-sm text-red-600 flex items-center">
+                                    <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
+                                    <span>{formErrors.ds_bairro}</span>
                                 </p>
                             )}
                         </div>
 
                         {/* Complemento */}
-                        <div className="relative">
-                            <label htmlFor="ds_complemento" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
+                        <div className="relative md:col-span-3">
+                            <label htmlFor="ds_complemento" className="text-sm font-medium text-gray-700 mb-1 block">
                                 Complemento
                             </label>
                             <input
@@ -747,95 +789,109 @@ export function ClientFormModal({
                             />
                         </div>
 
-                        {/* Código IBGE */}
-                        <div className="relative">
-                            <label htmlFor="nr_codigo_ibge" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                                Código IBGE
-                            </label>
-                            <input
-                                type="text"
-                                id="nr_codigo_ibge"
-                                name="nr_codigo_ibge"
-                                value={formData.nr_codigo_ibge || ''}
-                                onChange={handleChange}
-                                disabled={isSubmitting || mode === 'view'}
-                                className={getInputClasses('nr_codigo_ibge')}
-                                placeholder="Código IBGE"
-                            />
-                        </div>
+                        {/* Seção de informações adicionais com expansão opcional */}
+                        <div className="md:col-span-3 pt-2">
+                            <details className="group">
+                                <summary className="flex items-center text-sm font-medium text-gray-700 cursor-pointer mb-2 hover:text-gray-900 transition-colors duration-200">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 transition-transform duration-200 group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                    Informações adicionais
+                                </summary>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4 mt-4 pl-6 border-l-2 border-gray-100">
+                                    {/* Código IBGE */}
+                                    <div className="relative">
+                                        <label htmlFor="nr_codigo_ibge" className="text-sm font-medium text-gray-700 mb-1 block">
+                                            Código IBGE
+                                        </label>
+                                        <input
+                                            type="text"
+                                            id="nr_codigo_ibge"
+                                            name="nr_codigo_ibge"
+                                            value={formData.nr_codigo_ibge || ''}
+                                            onChange={handleChange}
+                                            disabled={isSubmitting || mode === 'view'}
+                                            className={getInputClasses('nr_codigo_ibge')}
+                                            placeholder="Código IBGE"
+                                        />
+                                    </div>
 
-                        {/* Latitude */}
-                        <div className="relative">
-                            <label htmlFor="nr_latitude" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                                Latitude
-                            </label>
-                            <input
-                                type="number"
-                                step="0.000001"
-                                id="nr_latitude"
-                                name="nr_latitude"
-                                value={formData.nr_latitude !== undefined ? formData.nr_latitude : ''}
-                                onChange={handleNumberChange}
-                                disabled={isSubmitting || mode === 'view'}
-                                className={getInputClasses('nr_latitude')}
-                                placeholder="Latitude"
-                            />
-                        </div>
+                                    {/* Latitude */}
+                                    <div className="relative">
+                                        <label htmlFor="nr_latitude" className="text-sm font-medium text-gray-700 mb-1 block">
+                                            Latitude
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.000001"
+                                            id="nr_latitude"
+                                            name="nr_latitude"
+                                            value={formData.nr_latitude !== undefined ? formData.nr_latitude : ''}
+                                            onChange={handleNumberChange}
+                                            disabled={isSubmitting || mode === 'view'}
+                                            className={getInputClasses('nr_latitude')}
+                                            placeholder="Latitude"
+                                        />
+                                    </div>
 
-                        {/* Longitude */}
-                        <div className="relative">
-                            <label htmlFor="nr_longitude" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                                Longitude
-                            </label>
-                            <input
-                                type="number"
-                                step="0.000001"
-                                id="nr_longitude"
-                                name="nr_longitude"
-                                value={formData.nr_longitude !== undefined ? formData.nr_longitude : ''}
-                                onChange={handleNumberChange}
-                                disabled={isSubmitting || mode === 'view'}
-                                className={getInputClasses('nr_longitude')}
-                                placeholder="Longitude"
-                            />
-                        </div>
+                                    {/* Longitude */}
+                                    <div className="relative">
+                                        <label htmlFor="nr_longitude" className="text-sm font-medium text-gray-700 mb-1 block">
+                                            Longitude
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.000001"
+                                            id="nr_longitude"
+                                            name="nr_longitude"
+                                            value={formData.nr_longitude !== undefined ? formData.nr_longitude : ''}
+                                            onChange={handleNumberChange}
+                                            disabled={isSubmitting || mode === 'view'}
+                                            className={getInputClasses('nr_longitude')}
+                                            placeholder="Longitude"
+                                        />
+                                    </div>
 
-                        {/* Distância */}
-                        <div className="relative">
-                            <label htmlFor="nr_distancia_km" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                                Distância (km)
-                            </label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                id="nr_distancia_km"
-                                name="nr_distancia_km"
-                                value={formData.nr_distancia_km !== undefined ? formData.nr_distancia_km : ''}
-                                onChange={handleNumberChange}
-                                disabled={isSubmitting || mode === 'view'}
-                                className={getInputClasses('nr_distancia_km')}
-                                placeholder="Distância em km"
-                            />
+                                    {/* Distância */}
+                                    <div className="relative">
+                                        <label htmlFor="nr_distancia_km" className="text-sm font-medium text-gray-700 mb-1 block">
+                                            Distância (km)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            id="nr_distancia_km"
+                                            name="nr_distancia_km"
+                                            value={formData.nr_distancia_km !== undefined ? formData.nr_distancia_km : ''}
+                                            onChange={handleNumberChange}
+                                            disabled={isSubmitting || mode === 'view'}
+                                            className={getInputClasses('nr_distancia_km')}
+                                            placeholder="Distância em km"
+                                        />
+                                    </div>
+                                </div>
+                            </details>
                         </div>
                     </div>
                 );
             case 'contrato':
                 return (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
                         {/* Tipo (Matriz/Filial) */}
                         <div className="flex items-center mb-2">
-                            <input
-                                id="fl_matriz"
-                                name="fl_matriz"
-                                type="checkbox"
-                                checked={formData.fl_matriz}
-                                onChange={handleCheckboxChange}
-                                disabled={isSubmitting || mode === 'view'}
-                                className="h-4 w-4 text-emerald-500 border-gray-300 rounded focus:ring-emerald-500"
-                            />
-                            <label htmlFor="fl_matriz" className="ml-2 block text-sm text-gray-700">
-                                Cliente matriz
-                            </label>
+                            <div className="relative inline-flex items-center">
+                                <input
+                                    id="fl_matriz"
+                                    name="fl_matriz"
+                                    type="checkbox"
+                                    checked={formData.fl_matriz}
+                                    onChange={handleCheckboxChange}
+                                    disabled={isSubmitting || mode === 'view'}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-focus:ring-2 peer-focus:ring-purple-300 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                                <span className="ml-3 text-sm font-medium text-gray-700">Cliente matriz</span>
+                            </div>
                         </div>
 
                         {/* Espaço em branco para balancear o grid */}
@@ -843,34 +899,41 @@ export function ClientFormModal({
 
                         {/* Situação */}
                         <div className="relative">
-                            <label htmlFor="ds_situacao" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                                Situação <span className="text-red-500 ml-1">*</span>
+                            <label htmlFor="ds_situacao" className="text-sm font-medium text-gray-700 mb-1 block">
+                                Situação <span className="text-red-500">*</span>
                             </label>
-                            <select
-                                id="ds_situacao"
-                                name="ds_situacao"
-                                value={formData.ds_situacao}
-                                onChange={handleChange}
-                                disabled={isSubmitting || mode === 'view'}
-                                className={getInputClasses('ds_situacao')}
-                            >
-                                <option value="">Selecione</option>
-                                <option value="Ativo">Ativo</option>
-                                <option value="Inativo">Inativo</option>
-                                <option value="Prospecto">Prospecto</option>
-                                <option value="Em negociação">Em negociação</option>
-                            </select>
+                            <div className="relative">
+                                <select
+                                    id="ds_situacao"
+                                    name="ds_situacao"
+                                    value={formData.ds_situacao}
+                                    onChange={handleChange}
+                                    disabled={isSubmitting || mode === 'view'}
+                                    className={getInputClasses('ds_situacao')}
+                                >
+                                    <option value="">Selecione</option>
+                                    <option value="Ativo">Ativo</option>
+                                    <option value="Inativo">Inativo</option>
+                                    <option value="Prospecto">Prospecto</option>
+                                    <option value="Em negociação">Em negociação</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </div>
+                            </div>
                             {formErrors.ds_situacao && (
-                                <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                    <ShieldAlert size={16} className="mr-1" />
-                                    {formErrors.ds_situacao}
+                                <p className="mt-1 text-sm text-red-600 flex items-center">
+                                    <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
+                                    <span>{formErrors.ds_situacao}</span>
                                 </p>
                             )}
                         </div>
 
                         {/* Sistema */}
                         <div className="relative">
-                            <label htmlFor="ds_sistema" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
+                            <label htmlFor="ds_sistema" className="text-sm font-medium text-gray-700 mb-1 block">
                                 Sistema
                             </label>
                             <input
@@ -887,7 +950,7 @@ export function ClientFormModal({
 
                         {/* Contrato - Ocupa as duas colunas */}
                         <div className="relative md:col-span-2">
-                            <label htmlFor="ds_contrato" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
+                            <label htmlFor="ds_contrato" className="text-sm font-medium text-gray-700 mb-1 block">
                                 Contrato
                             </label>
                             <textarea
@@ -914,7 +977,7 @@ export function ClientFormModal({
             return (
                 <button
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="px-4 py-2.5 text-sm font-medium text-white bg-blue-500 rounded-lg shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all duration-200"
                 >
                     Fechar
@@ -980,7 +1043,7 @@ export function ClientFormModal({
     return (
         <FormModal
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
             title={getModalTitle()}
             size="2xl"
             mode={mode}
@@ -1108,7 +1171,7 @@ export function ClientFormModal({
                     <div className="flex justify-end">
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="px-4 py-2.5 text-sm font-medium text-white bg-blue-500 rounded-lg shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300 transition-all duration-200"
                         >
                             Fechar
@@ -1123,7 +1186,7 @@ export function ClientFormModal({
                         // Aqui seria implementada a lógica de submissão do formulário
                         setTimeout(() => {
                             setIsSubmitting(false);
-                            onClose();
+                            handleClose();
                         }, 1500);
                     }
                 }} className="space-y-5">
@@ -1138,7 +1201,7 @@ export function ClientFormModal({
                         {/* Cancel button */}
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={handleClose}
                             disabled={isSubmitting}
                             className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-all duration-200"
                         >

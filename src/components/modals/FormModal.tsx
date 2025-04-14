@@ -79,19 +79,17 @@ export function FormModal({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-900/20 backdrop-blur-[2px]">
             {/* Backdrop */}
             <div
-                className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+                className="fixed inset-0 bg-black bg-opacity-40 transition-opacity"
                 aria-hidden="true"
-                onClick={(e) => {
-                    // Evitar que o modal feche quando clicado fora (no backdrop)
-                    e.stopPropagation();
-                }}
+                onClick={(e) => e.stopPropagation()}
             />
 
             {/* Modal container */}
-            <div className="flex min-h-screen items-center justify-center p-4"
+            <div
+                className="flex min-h-screen items-center justify-center p-4"
                 onClick={(e) => {
                     e.stopPropagation();
                     // Permitir fechar o modal apenas quando não estiver na terceira etapa
@@ -103,20 +101,35 @@ export function FormModal({
             >
                 {/* Modal content */}
                 <div
-                    className={`${getModalSizeClasses()} w-full bg-white rounded-xl shadow-xl transform transition-all ${className}`}
+                    className={`${getModalSizeClasses()} w-full bg-white rounded-xl shadow-2xl transform transition-all ${className}`}
                     onClick={(e) => e.stopPropagation()}
+                    style={{ boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)' }}
                 >
                     {/* Modal header */}
-                    <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
-                        <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                    <div className={`flex justify-between items-center px-6 py-4 border-b ${mode === 'create'
+                        ? 'border-emerald-100 bg-emerald-50/40'
+                        : mode === 'edit'
+                            ? 'border-amber-100 bg-amber-50/40'
+                            : 'border-blue-100 bg-blue-50/40'}`}>
+                        <h3 className="text-lg font-medium flex items-center">
                             {icon && <div className="mr-3">{icon}</div>}
-                            {title}
+                            <span className={`${mode === 'create'
+                                ? 'text-emerald-800'
+                                : mode === 'edit'
+                                    ? 'text-amber-800'
+                                    : 'text-blue-800'}`}>
+                                {title}
+                            </span>
                         </h3>
                         {showCloseButton && (
                             <button
                                 type="button"
                                 onClick={onClose}
-                                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                                className={`text-gray-400 hover:text-gray-500 focus:outline-none transition-colors duration-200 ${mode === 'create'
+                                    ? 'hover:text-emerald-700'
+                                    : mode === 'edit'
+                                        ? 'hover:text-amber-700'
+                                        : 'hover:text-blue-700'}`}
                                 aria-label="Fechar"
                             >
                                 <X size={20} />

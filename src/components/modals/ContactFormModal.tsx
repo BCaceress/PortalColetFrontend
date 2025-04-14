@@ -60,6 +60,25 @@ export function ContactFormModal({
     // Loading state for form submission
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Custom onClose handler that resets form data and errors
+    const handleClose = () => {
+        // Reset to initial state if in create mode (não resetamos em edit para preservar mudanças)
+        if (modalMode === 'create') {
+            setFormData({
+                nome: '',
+                email: '',
+                telefone: '',
+                empresa: '',
+                cargo: '',
+                fl_ativo: true
+            });
+        }
+        // Reset validation errors
+        setFormErrors({});
+        // Call original onClose
+        onClose();
+    };
+
     // Initialize form data when modal opens or contact changes
     useEffect(() => {
         if (currentContact && (modalMode === 'edit' || modalMode === 'view')) {
@@ -234,7 +253,7 @@ export function ContactFormModal({
     return (
         <FormModal
             isOpen={isOpen}
-            onClose={onClose}
+            onClose={handleClose}
             title={getModalTitle()}
             size="md"
             mode={modalMode}
@@ -467,7 +486,7 @@ export function ContactFormModal({
                         {/* Cancel button */}
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={handleClose}
                             disabled={isSubmitting}
                             className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-all duration-200"
                         >
