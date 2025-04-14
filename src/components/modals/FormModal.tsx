@@ -1,22 +1,20 @@
 'use client';
 
-import { Dialog, Transition } from '@headlessui/react';
 import { X } from 'lucide-react';
-import { Fragment, ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 
-// Adicionando o tipo ModalMode
-type ModalMode = 'create' | 'edit' | 'view' | undefined;
+type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
 
 interface FormModalProps {
     isOpen: boolean;
     onClose: () => void;
     title: string;
     children: ReactNode;
-    size?: 'sm' | 'md' | 'lg' | 'xl';
+    size?: ModalSize;
     className?: string;
     showCloseButton?: boolean;
-    mode?: ModalMode; // Prop para identificar o tipo do modal
-    icon?: ReactNode; // Nova prop para o ícone
+    mode?: 'create' | 'edit' | 'view';
+    icon?: ReactNode;
 }
 
 export function FormModal({
@@ -30,84 +28,108 @@ export function FormModal({
     mode,
     icon,
 }: FormModalProps) {
+    // Close on escape key
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+        };
 
-    // Define width class based on size prop
-    const sizeClasses = {
-        sm: 'max-w-sm',
-        md: 'max-w-md',
-        lg: 'max-w-lg',
-        xl: 'max-w-xl',
-    };
+        if (isOpen) {
+            document.addEventListener('keydown', handleEsc);
+        }
 
-    // Define background color classes based on mode
-    const getTitleBackgroundClass = () => {
-        switch (mode) {
-            case 'create':
-                return 'bg-emerald-50 border-emerald-100';
-            case 'edit':
-                return 'bg-amber-50 border-amber-100';
-            case 'view':
-                return 'bg-blue-50 border-blue-100';
+        return () => {
+            document.removeEventListener('keydown', handleEsc);
+        };
+    }, [isOpen, onClose]);
+
+    // Prevent body scroll when modal is open
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [isOpen]);
+
+    // Handle modal size
+    const getModalSizeClasses = () => {
+        switch (size) {
+            case 'sm':
+                return 'max-w-sm';
+            case 'md':
+                return 'max-w-md';
+            case 'lg':
+                return 'max-w-lg';
+            case 'xl':
+                return 'max-w-xl';
+            case '2xl':
+                return 'max-w-2xl';
+            case 'full':
+                return 'max-w-[95%] w-full';
             default:
-                return 'bg-white border-gray-100';
+                return 'max-w-md';
         }
     };
 
-    // Define text color classes based on mode
-    const getTitleTextClass = () => {
-        switch (mode) {
-            case 'create':
-                return 'text-emerald-800';
-            case 'edit':
-                return 'text-amber-800';
-            case 'view':
-                return 'text-blue-800';
-            default:
-                return 'text-gray-800';
-        }
-    };
+    if (!isOpen) return null;
 
     return (
-        <Transition appear show={isOpen} as={Fragment}>
-            <Dialog as="div" className="relative z-50" onClose={onClose}>
-                <div className="fixed inset-0 overflow-y-auto bg-black/10 backdrop-blur-sm">
-                    <div className="flex min-h-full items-center justify-center p-4 text-center">
-                        <Dialog.Panel
-                            className={`w-full ${sizeClasses[size]} transform overflow-hidden rounded-xl bg-white p-0 text-left align-middle shadow-xl border border-gray-100 ${className}`}
-                        >
-                            <div className={`flex items-center justify-between px-6 py-4 border-b ${getTitleBackgroundClass()}`}>
-                                <div className="flex items-center">
-                                    {/* Ícone do modal */}
-                                    {icon && <div className="mr-3">{icon}</div>}
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+            {/* Backdrop */}
+            <div
+                className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+                aria-hidden="true"
+                onClick={(e) => {
+                    // Evitar que o modal feche quando clicado fora (no backdrop)
+                    e.stopPropagation();
+                }}
+            />
 
-                                    {/* Título do modal */}
-                                    <Dialog.Title
-                                        as="h3"
-                                        className={`text-lg font-semibold leading-6 tracking-tight ${getTitleTextClass()}`}
-                                    >
-                                        {title}
-                                    </Dialog.Title>
-                                </div>
+            {/* Modal container */}
+            <div className="flex min-h-screen items-center justify-center p-4"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    // Permitir fechar o modal apenas quando não estiver na terceira etapa
+                    // O indicador de modal sendo renderizado no terceiro passo seria pelo título
+                    if (!title.includes('Contrato')) {
+                        onClose();
+                    }
+                }}
+            >
+                {/* Modal content */}
+                <div
+                    className={`${getModalSizeClasses()} w-full bg-white rounded-xl shadow-xl transform transition-all ${className}`}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Modal header */}
+                    <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
+                        <h3 className="text-lg font-medium text-gray-900 flex items-center">
+                            {icon && <div className="mr-3">{icon}</div>}
+                            {title}
+                        </h3>
+                        {showCloseButton && (
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                                aria-label="Fechar"
+                            >
+                                <X size={20} />
+                            </button>
+                        )}
+                    </div>
 
-                                {showCloseButton && (
-                                    <button
-                                        type="button"
-                                        className={`hover:text-gray-600 focus:outline-none transition-colors duration-200 rounded-full p-1 hover:bg-white/30 ${getTitleTextClass()}`}
-                                        onClick={onClose}
-                                        aria-label="Fechar"
-                                    >
-                                        <X size={20} />
-                                    </button>
-                                )}
-                            </div>
-
-                            <div className="p-6">
-                                {children}
-                            </div>
-                        </Dialog.Panel>
+                    {/* Modal body */}
+                    <div className="px-6 py-5">
+                        {children}
                     </div>
                 </div>
-            </Dialog>
-        </Transition>
+            </div>
+        </div>
     );
 }

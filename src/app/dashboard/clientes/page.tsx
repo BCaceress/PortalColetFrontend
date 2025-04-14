@@ -6,6 +6,7 @@ import { Building2, Edit, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Import our reusable components
+import { ClientFormModal } from '@/components/modals/ClientFormModal';
 import { ActiveFilters } from '@/components/ui/ActiveFilters';
 import { Column, DataTable } from '@/components/ui/DataTable';
 import { FilterPanel } from '@/components/ui/FilterPanel';
@@ -93,7 +94,7 @@ export default function Clientes() {
     const [clientes, setClientes] = useState<Cliente[]>([]);
     const [filteredClientes, setFilteredClientes] = useState<Cliente[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError,] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'todos' | 'ativos' | 'inativos'>('todos');
     const [contatosFilter, setContatosFilter] = useState<'todos' | 'com' | 'sem'>('todos');
@@ -618,7 +619,19 @@ export default function Clientes() {
                 onClick={handleCreateNewClient}
             />
 
-            {/* Modal components will be implemented later */}
+            {/* Client Form Modal */}
+            <ClientFormModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                mode={modalMode}
+                cliente={currentCliente}
+                formData={formData}
+                setFormData={setFormData}
+                formErrors={formErrors}
+                setFormErrors={setFormErrors}
+                isSubmitting={isSubmitting}
+                setIsSubmitting={setIsSubmitting}
+            />
         </div>
     );
 }
