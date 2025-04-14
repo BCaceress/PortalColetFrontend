@@ -14,6 +14,8 @@ export default function DashboardLayout({
     const { user, isAuthenticated } = useAuth();
     const router = useRouter();
     const [isLoading, setIsLoading] = useState(true);
+    const [collapsed, setCollapsed] = useState(false);
+    const [mobileOpen, setMobileOpen] = useState(false);
 
     // Proteger a rota - redirecionar se não estiver autenticado após verificação
     useEffect(() => {
@@ -31,19 +33,28 @@ export default function DashboardLayout({
     // Se estiver carregando, mostrar tela de carregamento
     if (isLoading) {
         return (
-            <div className="flex flex-col justify-center items-center h-screen bg-gray-50">
+            <div className="flex flex-col justify-center items-center h-screen bg-gray-100">
                 <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#09A08D] mb-4"></div>
-                <p className="text-gray-600 font-medium">Carregando...</p>
+                <p className="text-gray-700 font-medium">Carregando...</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
-            <Header user={user} />
-            <div className="flex">
-                <Sidebar />
-                <div className="flex-1 transition-all duration-200 ease-in-out">
+        <div className="min-h-screen bg-gray-100 flex flex-col">
+            <Header
+                user={user}
+                collapsed={collapsed}
+                setCollapsed={setCollapsed}
+                mobileOpen={mobileOpen}
+                setMobileOpen={setMobileOpen}
+            />
+            <div className="flex flex-1 h-[calc(100vh-64px)]">
+                <Sidebar
+                    collapsed={collapsed}
+                    mobileOpen={mobileOpen}
+                />
+                <div className="flex-1 transition-all duration-200 ease-in-out overflow-auto">
                     {children}
                 </div>
             </div>

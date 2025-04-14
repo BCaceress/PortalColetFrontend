@@ -2,10 +2,10 @@
 
 import api from '@/services/api';
 import { motion } from 'framer-motion';
-import { Edit, UserPlus } from 'lucide-react';
+import { Building2, Edit, Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-// Import our new components
+// Import our reusable components
 import { ActiveFilters } from '@/components/ui/ActiveFilters';
 import { Column, DataTable } from '@/components/ui/DataTable';
 import { FilterPanel } from '@/components/ui/FilterPanel';
@@ -13,168 +13,205 @@ import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SearchBar } from '@/components/ui/SearchBar';
 
-// Define the contact type
-interface Contact {
-    id_contato: number;
-    ds_nome: string;
-    ds_cargo: string;
+// Define the client type to match the API response
+interface Cliente {
+    id_cliente: number;
     fl_ativo: boolean;
-    tx_observacoes: string;
-    ds_email: string;
-    ds_telefone: string;
-    fl_whatsapp: boolean;
-    clientes: {
-        id_cliente: number;
+    ds_nome: string;
+    ds_razao_social: string;
+    nr_cnpj: string;
+    nr_inscricao_estadual: string;
+    ds_site?: string;
+    ds_endereco: string;
+    ds_cep: string;
+    ds_uf: string;
+    ds_cidade: string;
+    ds_bairro: string;
+    nr_numero: string;
+    ds_complemento?: string;
+    nr_codigo_ibge?: string;
+    nr_latitude?: number;
+    nr_longitude?: number;
+    nr_distancia_km?: number;
+    tx_observacao_ident?: string;
+    fl_matriz: boolean;
+    ds_situacao: string;
+    ds_sistema?: string;
+    ds_contrato?: string;
+    nr_nomeados?: number;
+    nr_simultaneos?: number;
+    nr_tecnica_remoto?: number;
+    nr_tecnica_presencial?: number;
+    tm_minimo_horas?: string;
+    ds_diario_viagem?: string;
+    ds_regiao?: string;
+    tx_observacao_contrato?: string;
+    nr_codigo_zz?: number;
+    nr_franquia_nf?: number;
+    nr_qtde_documentos?: number;
+    nr_valor_franqia?: number;
+    nr_valor_excendente?: number;
+    dt_data_contrato?: string;
+    contatos?: {
+        id_contato: number;
         ds_nome: string;
+        ds_cargo: string;
     }[];
 }
 
-// Interface for new contact request payload
-interface ContactPayload {
+// Interface for new client request payload
+interface ClientePayload {
     ds_nome: string;
-    ds_cargo: string;
+    ds_razao_social: string;
+    nr_cnpj: string;
     fl_ativo: boolean;
-    tx_observacoes: string;
-    ds_email: string;
-    ds_telefone: string;
-    fl_whatsapp: boolean;
-    id_clientes: number[];
+    ds_endereco: string;
+    ds_cep: string;
+    ds_uf: string;
+    ds_cidade: string;
+    ds_bairro: string;
+    nr_numero: string;
+    fl_matriz: boolean;
+    ds_situacao: string;
+    // Optional fields
+    ds_site?: string;
+    ds_complemento?: string;
+    nr_inscricao_estadual?: string;
+    tx_observacao_ident?: string;
+    ds_sistema?: string;
+    ds_contrato?: string;
+    nr_nomeados?: number;
+    nr_simultaneos?: number;
+    ds_regiao?: string;
 }
 
 // Modal mode type
 type ModalMode = 'create' | 'edit' | 'view';
 
-export default function Contatos() {
-    const [contacts, setContacts] = useState<Contact[]>([]);
-    const [filteredContacts, setFilteredContacts] = useState<Contact[]>([]);
+export default function Clientes() {
+    const [clientes, setClientes] = useState<Cliente[]>([]);
+    const [filteredClientes, setFilteredClientes] = useState<Cliente[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<'todos' | 'ativos' | 'inativos'>('todos');
-    const [whatsappFilter, setWhatsappFilter] = useState<boolean | null>(null);
-    const [clienteFilter, setClienteFilter] = useState<number | null>(null);
-    const [clientes, setClientes] = useState<{ id_cliente: number, ds_nome: string }[]>([]);
+    const [contatosFilter, setContatosFilter] = useState<'todos' | 'com' | 'sem'>('todos');
+    const [matrizFilter, setMatrizFilter] = useState<'todos' | 'matriz' | 'filial'>('todos');
     const [animateItems, setAnimateItems] = useState(false);
-
-    // Estado para busca de clientes no modal
-    const [clienteSearchTerm, setClienteSearchTerm] = useState('');
-    const [filteredClientes, setFilteredClientes] = useState<{ id_cliente: number, ds_nome: string }[]>([]);
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [modalMode, setModalMode] = useState<ModalMode>('create');
-    const [currentContact, setCurrentContact] = useState<Contact | null>(null);
-    const [formData, setFormData] = useState<ContactPayload>({
+    const [currentCliente, setCurrentCliente] = useState<Cliente | null>(null);
+    const [formData, setFormData] = useState<ClientePayload>({
         ds_nome: '',
-        ds_cargo: '',
+        ds_razao_social: '',
+        nr_cnpj: '',
         fl_ativo: true,
-        tx_observacoes: '',
-        ds_email: '',
-        ds_telefone: '',
-        fl_whatsapp: false,
-        id_clientes: []
+        ds_endereco: '',
+        ds_cep: '',
+        ds_uf: '',
+        ds_cidade: '',
+        ds_bairro: '',
+        nr_numero: '',
+        fl_matriz: false,
+        ds_situacao: 'Ativo'
     });
-    const [formErrors, setFormErrors] = useState<Partial<Record<keyof ContactPayload, string>>>({});
+    const [formErrors, setFormErrors] = useState<Partial<Record<keyof ClientePayload, string>>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
-        const fetchContacts = async () => {
+        const fetchClientes = async () => {
             try {
                 setLoading(true);
-                const response = await api.get('/contatos');
-                setContacts(response.data);
-                setFilteredContacts(response.data);
+                const response = await api.get('/clientes');
+                setClientes(response.data);
+                setFilteredClientes(response.data);
                 setError(null);
 
-                // Acionamos a animação depois dos dados carregarem
+                // Trigger animation after data loads
                 setTimeout(() => setAnimateItems(true), 100);
             } catch (err) {
-                console.error('Erro ao buscar contatos:', err);
-                setError('Não foi possível carregar os contatos. Tente novamente mais tarde.');
+                console.error('Erro ao buscar clientes:', err);
+                setError('Não foi possível carregar os clientes. Tente novamente mais tarde.');
             } finally {
                 setLoading(false);
             }
         };
 
-        const fetchClientes = async () => {
-            try {
-                // Alterado para buscar apenas os clientes ativos
-                const response = await api.get('/clientes/lista/ativos');
-                setClientes(response.data);
-                setFilteredClientes(response.data);
-            } catch (err) {
-                console.error('Erro ao buscar clientes ativos:', err);
-            }
-        };
-
-        fetchContacts();
         fetchClientes();
     }, []);
 
     const handleSearch = (term: string) => {
         setSearchTerm(term);
-        filterContacts(term, statusFilter, whatsappFilter, clienteFilter);
+        filterClientes(term, statusFilter, contatosFilter, matrizFilter);
     };
 
     const handleStatusFilter = (status: 'todos' | 'ativos' | 'inativos') => {
         setStatusFilter(status);
-        filterContacts(searchTerm, status, whatsappFilter, clienteFilter);
+        filterClientes(searchTerm, status, contatosFilter, matrizFilter);
     };
 
-    const handleWhatsappFilter = (whatsapp: boolean | null) => {
-        setWhatsappFilter(whatsapp);
-        filterContacts(searchTerm, statusFilter, whatsapp, clienteFilter);
+    const handleContatosFilter = (contatos: 'todos' | 'com' | 'sem') => {
+        setContatosFilter(contatos);
+        filterClientes(searchTerm, statusFilter, contatos, matrizFilter);
     };
 
-    const handleClienteFilter = (clienteId: number | null) => {
-        setClienteFilter(clienteId);
-        filterContacts(searchTerm, statusFilter, whatsappFilter, clienteId);
+    const handleMatrizFilter = (matriz: 'todos' | 'matriz' | 'filial') => {
+        setMatrizFilter(matriz);
+        filterClientes(searchTerm, statusFilter, contatosFilter, matriz);
     };
 
     const clearFilters = () => {
         setStatusFilter('todos');
-        setWhatsappFilter(null);
-        setClienteFilter(null);
-        filterContacts(searchTerm, 'todos', null, null);
+        setContatosFilter('todos');
+        setMatrizFilter('todos');
+        filterClientes(searchTerm, 'todos', 'todos', 'todos');
     };
 
-    const filterContacts = (term: string, status: 'todos' | 'ativos' | 'inativos', whatsapp: boolean | null, clienteId: number | null) => {
-        // Disparamos a animação de fade-out
+    const filterClientes = (
+        term: string,
+        status: 'todos' | 'ativos' | 'inativos',
+        contatos: 'todos' | 'com' | 'sem',
+        matriz: 'todos' | 'matriz' | 'filial'
+    ) => {
+        // Trigger fade-out animation
         setAnimateItems(false);
 
         setTimeout(() => {
-            let filtered = contacts;
+            let filtered = clientes;
 
             if (term) {
-                filtered = filtered.filter(contact =>
-                    contact.ds_nome.toLowerCase().includes(term.toLowerCase()) ||
-                    contact.ds_email.toLowerCase().includes(term.toLowerCase()) ||
-                    contact.ds_telefone.includes(term)
+                filtered = filtered.filter(cliente =>
+                    cliente.ds_nome.toLowerCase().includes(term.toLowerCase()) ||
+                    cliente.ds_razao_social.toLowerCase().includes(term.toLowerCase()) ||
+                    cliente.nr_cnpj.includes(term) ||
+                    (cliente.ds_site && cliente.ds_site.toLowerCase().includes(term.toLowerCase()))
                 );
             }
 
             if (status !== 'todos') {
-                filtered = filtered.filter(contact => (status === 'ativos' ? contact.fl_ativo : !contact.fl_ativo));
+                filtered = filtered.filter(cliente => (status === 'ativos' ? cliente.fl_ativo : !cliente.fl_ativo));
             }
 
-            if (whatsapp !== null) {
-                filtered = filtered.filter(contact => contact.fl_whatsapp === whatsapp);
+            if (contatos !== 'todos') {
+                filtered = filtered.filter(cliente => {
+                    const hasContacts = cliente.contatos && cliente.contatos.length > 0;
+                    return contatos === 'com' ? hasContacts : !hasContacts;
+                });
             }
 
-            if (clienteId !== null) {
-                filtered = filtered.filter(contact =>
-                    contact.clientes &&
-                    contact.clientes.some(cliente => cliente.id_cliente === clienteId)
-                );
+            if (matriz !== 'todos') {
+                filtered = filtered.filter(cliente => (matriz === 'matriz' ? cliente.fl_matriz : !cliente.fl_matriz));
             }
 
-            setFilteredContacts(filtered);
-            // Disparamos a animação de fade-in após os filtros serem aplicados
+            setFilteredClientes(filtered);
+            // Trigger fade-in animation
             setTimeout(() => setAnimateItems(true), 100);
         }, 200);
     };
 
-    // Create active filters array for the ActiveFilters component
+    // Create active filters array
     const activeFilters = [
         ...(statusFilter !== 'todos' ? [{
             id: 'status',
@@ -182,21 +219,21 @@ export default function Contatos() {
             type: 'status' as const,
             onRemove: () => handleStatusFilter('todos')
         }] : []),
-        ...(whatsappFilter !== null ? [{
-            id: 'whatsapp',
-            label: whatsappFilter ? 'WhatsApp' : 'Sem WhatsApp',
-            type: 'feature' as const,
-            onRemove: () => handleWhatsappFilter(null)
-        }] : []),
-        ...(clienteFilter !== null ? [{
-            id: 'cliente',
-            label: clientes.find(c => c.id_cliente === clienteFilter)?.ds_nome || 'Cliente',
+        ...(contatosFilter !== 'todos' ? [{
+            id: 'contatos',
+            label: contatosFilter === 'com' ? 'Com contatos' : 'Sem contatos',
             type: 'relation' as const,
-            onRemove: () => handleClienteFilter(null)
+            onRemove: () => handleContatosFilter('todos')
+        }] : []),
+        ...(matrizFilter !== 'todos' ? [{
+            id: 'matriz',
+            label: matrizFilter === 'matriz' ? 'Matriz' : 'Filial',
+            type: 'feature' as const,
+            onRemove: () => handleMatrizFilter('todos')
         }] : [])
     ];
 
-    // Create filter configurations for the FilterPanel component
+    // Create filter configurations for the FilterPanel
     const filterConfig = [
         {
             name: 'Status',
@@ -210,34 +247,43 @@ export default function Contatos() {
             onChange: handleStatusFilter
         },
         {
-            name: 'WhatsApp',
+            name: 'Tipo',
             type: 'toggle' as const,
             options: [
-                { id: 'todos', label: 'Todos', value: null },
-                { id: 'sim', label: 'Sim', value: true },
-                { id: 'nao', label: 'Não', value: false }
+                { id: 'todos', label: 'Todos', value: 'todos' },
+                { id: 'matriz', label: 'Matriz', value: 'matriz' },
+                { id: 'filial', label: 'Filial', value: 'filial' }
             ],
-            currentValue: whatsappFilter,
-            onChange: handleWhatsappFilter
+            currentValue: matrizFilter,
+            onChange: handleMatrizFilter
         },
         {
-            name: 'Cliente',
-            type: 'select' as const,
+            name: 'Contatos',
+            type: 'toggle' as const,
             options: [
-                { id: 'todos', label: 'Todos os clientes', value: null },
-                ...clientes.map(cliente => ({
-                    id: cliente.id_cliente.toString(),
-                    label: cliente.ds_nome,
-                    value: cliente.id_cliente
-                }))
+                { id: 'todos', label: 'Todos', value: 'todos' },
+                { id: 'com', label: 'Com contatos', value: 'com' },
+                { id: 'sem', label: 'Sem contatos', value: 'sem' }
             ],
-            currentValue: clienteFilter,
-            onChange: handleClienteFilter
+            currentValue: contatosFilter,
+            onChange: handleContatosFilter
         }
     ];
 
-    // Define columns for DataTable
-    const columns: Column<Contact>[] = [
+    // Format CNPJ helper function
+    const formatCNPJ = (cnpj: string) => {
+        if (!cnpj) return '';
+        // Remove non-numeric characters
+        const numericCNPJ = cnpj.replace(/\D/g, '');
+        // Apply CNPJ mask: xx.xxx.xxx/xxxx-xx
+        return numericCNPJ.replace(
+            /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+            '$1.$2.$3/$4-$5'
+        );
+    };
+
+    // Define columns for the DataTable
+    const columns: Column<Cliente>[] = [
         {
             header: 'Nome',
             accessor: 'ds_nome',
@@ -246,39 +292,8 @@ export default function Contatos() {
             )
         },
         {
-            header: 'Email',
-            accessor: 'ds_email',
-            cellRenderer: (value) => (
-                <a href={`mailto:${value}`} className="text-blue-600 hover:text-blue-800 hover:underline transition-colors">
-                    {value}
-                </a>
-            )
-        },
-        {
-            header: 'Telefone',
-            accessor: (row) => (
-                <div className="flex items-center">
-                    <span className="text-gray-800">
-                        <a href={`tel:${row.ds_telefone.replace(/\D/g, '')}`} className="hover:text-blue-600 transition-colors">
-                            {row.ds_telefone}
-                        </a>
-                    </span>
-                    {row.fl_whatsapp && (
-                        <span
-                            className="ml-2 w-5 h-5 text-green-500 flex items-center justify-center"
-                            title="WhatsApp disponível"
-                        >
-                            <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M17.6 6.32A7.85 7.85 0 0 0 12.02 4c-4.42 0-8 3.58-8 8a8.03 8.03 0 0 0 1.08 4l-1.08 4 4.13-1.08A7.95 7.95 0 0 0 12.02 20c4.42 0 8-3.58 8-8 0-2.14-.83-4.14-2.28-5.64l-.14-.04z"></path>
-                            </svg>
-                        </span>
-                    )}
-                </div>
-            )
-        },
-        {
-            header: 'Cargo',
-            accessor: 'ds_cargo',
+            header: 'Razão Social',
+            accessor: 'ds_razao_social',
             cellRenderer: (value) => (
                 value ? (
                     <span className="text-gray-800">{value}</span>
@@ -288,33 +303,45 @@ export default function Contatos() {
             )
         },
         {
-            header: 'Clientes',
-            accessor: (row) => {
-                if (!row.clientes || row.clientes.length === 0) {
-                    return (
-                        <span className="text-gray-400 text-sm italic">Nenhum cliente</span>
-                    );
-                }
-
-                return (
-                    <div className="flex flex-wrap gap-1">
-                        {row.clientes.length > 1 ? (
-                            <>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                                    {row.clientes[0].ds_nome}
-                                </span>
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                                    +{row.clientes.length - 1}
-                                </span>
-                            </>
-                        ) : (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                                {row.clientes[0].ds_nome}
-                            </span>
-                        )}
-                    </div>
-                );
-            }
+            header: 'CNPJ',
+            accessor: 'nr_cnpj',
+            cellRenderer: (value) => (
+                <span className="text-gray-700">{formatCNPJ(value)}</span>
+            )
+        },
+        {
+            header: 'Localização',
+            accessor: (row) => (
+                `${row.ds_cidade}/${row.ds_uf}`
+            ),
+            cellRenderer: (value) => (
+                <span className="text-gray-700">{value}</span>
+            )
+        },
+        {
+            header: 'Contrato',
+            accessor: 'ds_contrato',
+            cellRenderer: (value) => (
+                value ? (
+                    <span className="text-gray-700">{value}</span>
+                ) : (
+                    <span className="text-gray-400 italic">Não informado</span>
+                )
+            )
+        },
+        {
+            header: 'Tipo',
+            accessor: (row) => (
+                row.fl_matriz ? "Matriz" : "Filial"
+            ),
+            cellRenderer: (value) => (
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${value === "Matriz"
+                        ? "bg-purple-100 text-purple-800 border border-purple-200"
+                        : "bg-blue-100 text-blue-800 border border-blue-200"
+                    }`}>
+                    {value}
+                </span>
+            )
         },
         {
             header: 'Status',
@@ -335,11 +362,11 @@ export default function Contatos() {
     ];
 
     // Row actions
-    const contactActions = (contact: Contact) => (
+    const clienteActions = (cliente: Cliente) => (
         <>
             <motion.button
                 onClick={() => {
-                    setCurrentContact(contact);
+                    setCurrentCliente(cliente);
                     setModalMode('view');
                     setIsModalOpen(true);
                 }}
@@ -355,7 +382,7 @@ export default function Contatos() {
             </motion.button>
             <motion.button
                 onClick={() => {
-                    setCurrentContact(contact);
+                    setCurrentCliente(cliente);
                     setModalMode('edit');
                     setIsModalOpen(true);
                 }}
@@ -370,15 +397,15 @@ export default function Contatos() {
     );
 
     // Custom mobile card renderer
-    const renderMobileContactCard = (contact: Contact) => (
+    const renderMobileClienteCard = (cliente: Cliente) => (
         <div className="p-4">
             <div className="flex justify-between items-start">
                 <div>
-                    <h3 className="font-medium text-gray-900">{contact.ds_nome}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{contact.ds_cargo || "Sem cargo"}</p>
+                    <h3 className="font-medium text-gray-900">{cliente.ds_nome}</h3>
+                    <p className="text-sm text-gray-500 mt-1">{cliente.ds_razao_social}</p>
                 </div>
-                <div className="ml-2">
-                    {contact.fl_ativo ? (
+                <div className="ml-2 flex flex-col gap-1">
+                    {cliente.fl_ativo ? (
                         <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
                             <span className="w-1 h-1 bg-green-500 rounded-full mr-1"></span>
                             Ativo
@@ -389,46 +416,51 @@ export default function Contatos() {
                             Inativo
                         </span>
                     )}
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cliente.fl_matriz
+                            ? "bg-purple-100 text-purple-800 border border-purple-200"
+                            : "bg-blue-100 text-blue-800 border border-blue-200"
+                        }`}>
+                        {cliente.fl_matriz ? "Matriz" : "Filial"}
+                    </span>
                 </div>
             </div>
 
             <div className="mt-3 space-y-1.5">
                 <div className="flex items-center text-sm">
                     <svg className="w-4 h-4 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                     </svg>
-                    <a href={`mailto:${contact.ds_email}`} className="text-blue-600 hover:underline">
-                        {contact.ds_email}
-                    </a>
+                    <span className="text-gray-700">{formatCNPJ(cliente.nr_cnpj)}</span>
                 </div>
+
                 <div className="flex items-center text-sm">
                     <svg className="w-4 h-4 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                     </svg>
-                    <div className="flex items-center">
-                        <a href={`tel:${contact.ds_telefone.replace(/\D/g, '')}`} className="text-gray-700">
-                            {contact.ds_telefone}
-                        </a>
-                        {contact.fl_whatsapp && (
-                            <span className="ml-2 text-green-500 flex items-center">
-                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M17.6 6.32A7.85 7.85 0 0 0 12.02 4c-4.42 0-8 3.58-8 8a8.03 8.03 0 0 0 1.08 4l-1.08 4 4.13-1.08A7.95 7.95 0 0 0 12.02 20c4.42 0 8-3.58 8-8 0-2.14-.83-4.14-2.28-5.64l-.14-.04z"></path>
-                                </svg>
-                            </span>
-                        )}
-                    </div>
+                    <span className="text-gray-700">{cliente.ds_cidade}/{cliente.ds_uf}</span>
                 </div>
+
+                {cliente.ds_contrato && (
+                    <div className="flex items-center text-sm">
+                        <svg className="w-4 h-4 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span className="text-gray-700">{cliente.ds_contrato}</span>
+                    </div>
+                )}
             </div>
 
-            {contact.clientes && contact.clientes.length > 0 && (
+            {cliente.contatos && cliente.contatos.length > 0 && (
                 <div className="mt-3">
+                    <div className="text-xs text-gray-500 mb-1">Contatos:</div>
                     <div className="flex flex-wrap gap-1 mt-1">
-                        {contact.clientes.map((cliente) => (
+                        {cliente.contatos.map((contato) => (
                             <span
-                                key={cliente.id_cliente}
-                                className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100"
+                                key={contato.id_contato}
+                                className="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-purple-50 text-purple-700 border border-purple-100"
                             >
-                                {cliente.ds_nome}
+                                {contato.ds_nome}
                             </span>
                         ))}
                     </div>
@@ -439,7 +471,7 @@ export default function Contatos() {
                 <motion.button
                     onClick={(e) => {
                         e.stopPropagation();
-                        setCurrentContact(contact);
+                        setCurrentCliente(cliente);
                         setModalMode('view');
                         setIsModalOpen(true);
                     }}
@@ -456,7 +488,7 @@ export default function Contatos() {
                 <motion.button
                     onClick={(e) => {
                         e.stopPropagation();
-                        setCurrentContact(contact);
+                        setCurrentCliente(cliente);
                         setModalMode('edit');
                         setIsModalOpen(true);
                     }}
@@ -471,19 +503,23 @@ export default function Contatos() {
         </div>
     );
 
-    // Create new contact handler
-    const handleCreateNewContact = () => {
-        setCurrentContact(null);
+    // Create new client handler
+    const handleCreateNewClient = () => {
+        setCurrentCliente(null);
         setModalMode('create');
         setFormData({
             ds_nome: '',
-            ds_cargo: '',
+            ds_razao_social: '',
+            nr_cnpj: '',
             fl_ativo: true,
-            tx_observacoes: '',
-            ds_email: '',
-            ds_telefone: '',
-            fl_whatsapp: false,
-            id_clientes: []
+            ds_endereco: '',
+            ds_cep: '',
+            ds_uf: '',
+            ds_cidade: '',
+            ds_bairro: '',
+            nr_numero: '',
+            fl_matriz: false,
+            ds_situacao: 'Ativo'
         });
         setIsModalOpen(true);
     };
@@ -492,17 +528,17 @@ export default function Contatos() {
         <div className="p-3 sm:p-6 max-w-7xl mx-auto">
             {/* Page header with title and action button */}
             <PageHeader
-                title="Contatos"
-                description="Gerenciamento de contatos e clientes"
+                title="Clientes"
+                description="Gerenciamento de clientes da Colet"
                 actionButton={
                     <motion.button
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.97 }}
                         className="bg-gradient-to-r from-[#09A08D] to-teal-500 text-white px-4 sm:px-5 py-2.5 rounded-lg flex items-center gap-2 shadow-sm hover:shadow-md transition-all w-full sm:w-auto justify-center font-medium"
-                        onClick={handleCreateNewContact}
+                        onClick={handleCreateNewClient}
                     >
-                        <UserPlus size={18} />
-                        <span>Novo Contato</span>
+                        <Building2 size={18} />
+                        <span>Novo Cliente</span>
                     </motion.button>
                 }
             />
@@ -519,7 +555,7 @@ export default function Contatos() {
                     <div className="flex flex-col sm:flex-row items-center gap-3 p-3 sm:p-4">
                         <SearchBar
                             onSearch={handleSearch}
-                            placeholder="Buscar por nome, email ou telefone"
+                            placeholder="Buscar por nome, CNPJ ou site"
                             initialValue={searchTerm}
                         />
 
@@ -544,22 +580,22 @@ export default function Contatos() {
                 transition={{ duration: 0.4, delay: 0.2 }}
                 className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"
             >
-                <DataTable<Contact>
-                    data={filteredContacts}
+                <DataTable<Cliente>
+                    data={filteredClientes}
                     columns={columns}
-                    keyField="id_contato"
+                    keyField="id_cliente"
                     isLoading={loading}
                     error={error}
-                    rowActions={contactActions}
-                    mobileCardRenderer={renderMobileContactCard}
+                    rowActions={clienteActions}
+                    mobileCardRenderer={renderMobileClienteCard}
                     animationEnabled={animateItems}
                     emptyState={{
-                        title: "Nenhum contato encontrado",
-                        description: "Adicione um novo contato ou ajuste os filtros de busca",
+                        title: "Nenhum cliente encontrado",
+                        description: "Adicione um novo cliente ou ajuste os filtros de busca",
                         primaryAction: {
-                            label: "Novo Contato",
-                            icon: <UserPlus size={16} />,
-                            onClick: handleCreateNewContact
+                            label: "Novo Cliente",
+                            icon: <Building2 size={16} />,
+                            onClick: handleCreateNewClient
                         },
                         secondaryAction: {
                             label: "Limpar Filtros",
@@ -571,8 +607,8 @@ export default function Contatos() {
 
             {/* Floating action button for mobile */}
             <FloatingActionButton
-                icon={<UserPlus size={24} />}
-                onClick={handleCreateNewContact}
+                icon={<Plus size={24} />}
+                onClick={handleCreateNewClient}
             />
 
             {/* Modal components will be implemented later */}
