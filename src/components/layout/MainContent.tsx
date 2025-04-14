@@ -16,7 +16,7 @@ export default function MainContent() {
   });
 
   return (
-    <main className="flex-1 p-6 md:p-8 bg-gray-50 max-w-7xl mx-auto">
+    <main className="flex-1 pl-1 pr-4 py-2 md:pl-1 md:pr-4 md:py-6 bg-gray-50 max-w-7xl mx-auto">
       <div className="mb-8">
         <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
           <div>

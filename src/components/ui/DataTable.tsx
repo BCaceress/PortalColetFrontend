@@ -115,8 +115,8 @@ export function DataTable<T>({
     return (
         <>
             {/* Desktop table */}
-            <div className="hidden sm:block overflow-x-auto">
-                <table className="w-full">
+            <div className="hidden sm:block overflow-x-auto w-full">
+                <table className="w-full table-auto">
                     <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
                             {columns.map((column, index) => (
@@ -182,7 +182,7 @@ export function DataTable<T>({
             </div>
 
             {/* Mobile cards */}
-            <div className="sm:hidden divide-y divide-gray-200">
+            <div className="sm:hidden divide-y divide-gray-200 w-full">
                 {data.map((row, index) => {
                     if (mobileCardRenderer) {
                         return (
@@ -192,6 +192,7 @@ export function DataTable<T>({
                                 animate={animationEnabled ? { opacity: 1, y: 0 } : {}}
                                 transition={{ duration: 0.2, delay: index * 0.05 }}
                                 onClick={() => onRowClick && onRowClick(row)}
+                                className="w-full"
                             >
                                 {mobileCardRenderer(row)}
                             </motion.div>
@@ -205,10 +206,10 @@ export function DataTable<T>({
                             initial={{ opacity: 0, y: 10 }}
                             animate={animationEnabled ? { opacity: 1, y: 0 } : {}}
                             transition={{ duration: 0.2, delay: index * 0.05 }}
-                            className={`p-4 ${onRowClick ? 'cursor-pointer' : ''}`}
+                            className={`p-4 ${onRowClick ? 'cursor-pointer' : ''} w-full`}
                             onClick={() => onRowClick && onRowClick(row)}
                         >
-                            <div className="flex justify-between items-start">
+                            <div className="flex justify-between items-start w-full">
                                 <div>
                                     <h3 className="font-medium text-gray-900">
                                         {String(row[columns[0].accessor as keyof T])}

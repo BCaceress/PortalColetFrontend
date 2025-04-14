@@ -13,12 +13,25 @@ interface HeaderProps {
     setCollapsed: React.Dispatch<React.SetStateAction<boolean>>;
     mobileOpen: boolean;
     setMobileOpen: React.Dispatch<React.SetStateAction<boolean>>;
+    isFullscreen?: boolean;
+    setIsFullscreen?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-export default function Header({ user, collapsed, setCollapsed, mobileOpen, setMobileOpen }: HeaderProps) {
+export default function Header({
+    user,
+    collapsed,
+    setCollapsed,
+    mobileOpen,
+    setMobileOpen,
+    isFullscreen: propIsFullscreen,
+    setIsFullscreen: propSetIsFullscreen
+}: HeaderProps) {
     const { signOut } = useAuth();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
-    const [isFullscreen, setIsFullscreen] = useState(false);
+    // Use props if provided, otherwise use internal state
+    const [localIsFullscreen, setLocalIsFullscreen] = useState(false);
+    const isFullscreen = propIsFullscreen !== undefined ? propIsFullscreen : localIsFullscreen;
+    const setIsFullscreen = propSetIsFullscreen || setLocalIsFullscreen;
     const profileMenuRef = useRef<HTMLDivElement>(null);
     const profileButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -68,7 +81,7 @@ export default function Header({ user, collapsed, setCollapsed, mobileOpen, setM
     };
 
     return (
-        <header className="bg-[#3A3A3A] shadow-md sticky top-0 z-30 backdrop-blur-md">
+        <header className={`bg-[#3A3A3A] shadow-md sticky top-0 z-30 backdrop-blur-md transition-all duration-300 ease-in-out`}>
             <div className="max-w-full px-4 md:px-6 h-16 flex items-center justify-between">
                 {/* Área esquerda com botão de menu e logo */}
                 <div className="flex items-center space-x-3">
@@ -101,7 +114,7 @@ export default function Header({ user, collapsed, setCollapsed, mobileOpen, setM
                                 className="object-contain"
                                 priority
                             />
-                            <span className="ml-2 font-semibold text-xl text-white hidden sm:inline-block">
+                            <span className={`ml-2 font-semibold text-xl text-white hidden sm:inline-block transition-opacity duration-300 ${collapsed ? 'lg:opacity-100' : 'lg:opacity-100'}`}>
                                 <span className="text-[#09A08D]">Colet</span> Sistemas
                             </span>
                         </div>
@@ -163,7 +176,7 @@ export default function Header({ user, collapsed, setCollapsed, mobileOpen, setM
                         {showProfileMenu && (
                             <div
                                 ref={profileMenuRef}
-                                className="absolute right-0 mt-2 w-64 bg-[#3A3A3A] rounded-xl shadow-lg py-1.5 z-40 border border-gray-700 
+                                className="absolute right-0 mt-1 w-64 bg-[#3A3A3A] rounded-xl shadow-lg py-1.5 z-40 border border-gray-700 
                                           transform origin-top-right
                                           animate-in fade-in-50 slide-in-from-top-5 duration-150"
                                 role="menu"

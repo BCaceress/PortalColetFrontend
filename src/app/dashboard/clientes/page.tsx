@@ -336,8 +336,8 @@ export default function Clientes() {
             ),
             cellRenderer: (value) => (
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${value === "Matriz"
-                        ? "bg-purple-100 text-purple-800 border border-purple-200"
-                        : "bg-blue-100 text-blue-800 border border-blue-200"
+                    ? "bg-purple-100 text-purple-800 border border-purple-200"
+                    : "bg-blue-100 text-blue-800 border border-blue-200"
                     }`}>
                     {value}
                 </span>
@@ -417,8 +417,8 @@ export default function Clientes() {
                         </span>
                     )}
                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${cliente.fl_matriz
-                            ? "bg-purple-100 text-purple-800 border border-purple-200"
-                            : "bg-blue-100 text-blue-800 border border-blue-200"
+                        ? "bg-purple-100 text-purple-800 border border-purple-200"
+                        : "bg-blue-100 text-blue-800 border border-blue-200"
                         }`}>
                         {cliente.fl_matriz ? "Matriz" : "Filial"}
                     </span>
@@ -525,7 +525,7 @@ export default function Clientes() {
     };
 
     return (
-        <div className="p-3 sm:p-6 max-w-7xl mx-auto">
+        <div className="p-1 sm:p-4 max-w-7xl mx-auto">
             {/* Page header with title and action button */}
             <PageHeader
                 title="Clientes"

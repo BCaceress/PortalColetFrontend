@@ -6,6 +6,7 @@ import { Edit, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Import our new components
+import { ContactFormModal } from '@/components/modals/ContactFormModal';
 import { ActiveFilters } from '@/components/ui/ActiveFilters';
 import { Column, DataTable } from '@/components/ui/DataTable';
 import { FilterPanel } from '@/components/ui/FilterPanel';
@@ -489,7 +490,7 @@ export default function Contatos() {
     };
 
     return (
-        <div className="p-3 sm:p-6 max-w-7xl mx-auto">
+        <div className="p-1 sm:p-4 max-w-7xl mx-auto">
             {/* Page header with title and action button */}
             <PageHeader
                 title="Contatos"
@@ -575,7 +576,47 @@ export default function Contatos() {
                 onClick={handleCreateNewContact}
             />
 
-            {/* Modal components will be implemented later */}
+            {/* Contact modal */}
+            <ContactFormModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                modalMode={modalMode}
+                currentContact={currentContact ? {
+                    id_contato: currentContact.id_contato,
+                    nome: currentContact.ds_nome,
+                    email: currentContact.ds_email,
+                    telefone: currentContact.ds_telefone,
+                    empresa: currentContact.clientes?.[0]?.ds_nome || '',
+                    cargo: currentContact.ds_cargo,
+                    fl_ativo: currentContact.fl_ativo
+                } : null}
+                onSuccess={(message) => {
+                    // Mostrar notificação de sucesso (pode ser implementado depois)
+                    console.log(message);
+
+                    // Recarregar os dados
+                    const fetchContacts = async () => {
+                        try {
+                            setLoading(true);
+                            const response = await api.get('/contatos');
+                            setContacts(response.data);
+                            setFilteredContacts(response.data);
+                            setError(null);
+                        } catch (err) {
+                            console.error('Erro ao buscar contatos:', err);
+                            setError('Não foi possível carregar os contatos. Tente novamente mais tarde.');
+                        } finally {
+                            setLoading(false);
+                        }
+                    };
+
+                    fetchContacts();
+                }}
+                onError={(message) => {
+                    // Mostrar notificação de erro (pode ser implementado depois)
+                    console.error(message);
+                }}
+            />
         </div>
     );
 }

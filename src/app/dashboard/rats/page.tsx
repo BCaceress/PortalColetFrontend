@@ -521,7 +521,7 @@ export default function RATs() {
     };
 
     return (
-        <div className="p-3 sm:p-6 max-w-7xl mx-auto">
+        <div className="p-1 sm:p-4 max-w-7xl mx-auto">
             {/* Page header with title and action button */}
             <PageHeader
                 title="Registros de Atendimento"

@@ -41,7 +41,7 @@ export default function Usuarios() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [funcaoFilter, setFuncaoFilter] = useState<'todos' | 'admin' | 'operador' | 'consultor'>('todos');
+    const [funcaoFilter, setFuncaoFilter] = useState<'todos' | 'Administrador' | 'Analista' | 'Desenvolvedor' | 'Implantador' | 'Suporte'>('todos');
     const [statusFilter, setStatusFilter] = useState<'todos' | 'ativo' | 'inativo'>('todos');
     const [animateItems, setAnimateItems] = useState(false);
 
@@ -103,7 +103,7 @@ export default function Usuarios() {
         filterUsuarios(term, funcaoFilter, statusFilter);
     };
 
-    const handleFuncaoFilter = (funcao: 'todos' | 'admin' | 'operador' | 'consultor') => {
+    const handleFuncaoFilter = (funcao: 'todos' | 'Administrador' | 'Analista' | 'Desenvolvedor' | 'Implantador' | 'Suporte') => {
         setFuncaoFilter(funcao);
         filterUsuarios(searchTerm, funcao, statusFilter);
     };
@@ -121,7 +121,7 @@ export default function Usuarios() {
 
     const filterUsuarios = (
         term: string,
-        funcao: 'todos' | 'admin' | 'operador' | 'consultor',
+        funcao: 'todos' | 'Administrador' | 'Analista' | 'Desenvolvedor' | 'Implantador' | 'Suporte',
         status: 'todos' | 'ativo' | 'inativo'
     ) => {
         // Trigger fade-out animation
@@ -175,8 +175,7 @@ export default function Usuarios() {
     const activeFilters = [
         ...(funcaoFilter !== 'todos' ? [{
             id: 'funcao',
-            label: funcaoFilter === 'admin' ? 'Administrador' :
-                funcaoFilter === 'operador' ? 'Operador' : 'Consultor',
+            label: funcaoFilter,
             type: 'feature' as const,
             onRemove: () => handleFuncaoFilter('todos')
         }] : []),
@@ -195,9 +194,11 @@ export default function Usuarios() {
             type: 'multi-toggle' as const,
             options: [
                 { id: 'todos', label: 'Todos', value: 'todos' },
-                { id: 'admin', label: 'Administrador', value: 'admin' },
-                { id: 'operador', label: 'Operador', value: 'operador' },
-                { id: 'consultor', label: 'Consultor', value: 'consultor' }
+                { id: 'Administrador', label: 'Administrador', value: 'Administrador' },
+                { id: 'Analista', label: 'Analista', value: 'Analista' },
+                { id: 'Desenvolvedor', label: 'Desenvolvedor', value: 'Desenvolvedor' },
+                { id: 'Implantador', label: 'Implantador', value: 'Implantador' },
+                { id: 'Suporte', label: 'Suporte', value: 'Suporte' }
             ],
             currentValue: funcaoFilter,
             onChange: handleFuncaoFilter
@@ -238,15 +239,21 @@ export default function Usuarios() {
                 let badgeClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ";
 
                 switch (value) {
-                    case 'admin':
+                    case 'Administrador':
                         badgeClasses += "bg-purple-100 text-purple-800 border border-purple-200";
                         return <span className={badgeClasses}>Administrador</span>;
-                    case 'operador':
+                    case 'Analista':
                         badgeClasses += "bg-blue-100 text-blue-800 border border-blue-200";
-                        return <span className={badgeClasses}>Operador</span>;
-                    case 'consultor':
+                        return <span className={badgeClasses}>Analista</span>;
+                    case 'Desenvolvedor':
                         badgeClasses += "bg-teal-100 text-teal-800 border border-teal-200";
-                        return <span className={badgeClasses}>Consultor</span>;
+                        return <span className={badgeClasses}>Desenvolvedor</span>;
+                    case 'Implantador':
+                        badgeClasses += "bg-yellow-100 text-yellow-800 border border-yellow-200";
+                        return <span className={badgeClasses}>Implantador</span>;
+                    case 'Suporte':
+                        badgeClasses += "bg-red-100 text-red-800 border border-red-200";
+                        return <span className={badgeClasses}>Suporte</span>;
                     default:
                         badgeClasses += "bg-gray-100 text-gray-800 border border-gray-200";
                         return <span className={badgeClasses}>{value}</span>;
@@ -258,8 +265,8 @@ export default function Usuarios() {
             accessor: 'fl_ativo',
             cellRenderer: (value) => {
                 const badgeClasses = `inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${value
-                        ? "bg-green-100 text-green-800 border border-green-200"
-                        : "bg-red-100 text-red-800 border border-red-200"
+                    ? "bg-green-100 text-green-800 border border-green-200"
+                    : "bg-red-100 text-red-800 border border-red-200"
                     }`;
 
                 return <span className={badgeClasses}>{value ? 'Ativo' : 'Inativo'}</span>;
@@ -308,25 +315,33 @@ export default function Usuarios() {
         let roleLabel = usuario.funcao;
 
         switch (usuario.funcao) {
-            case 'admin':
+            case 'Administrador':
                 roleBadgeClasses += "bg-purple-100 text-purple-800 border border-purple-200";
                 roleLabel = "Administrador";
                 break;
-            case 'operador':
+            case 'Analista':
                 roleBadgeClasses += "bg-blue-100 text-blue-800 border border-blue-200";
-                roleLabel = "Operador";
+                roleLabel = "Analista";
                 break;
-            case 'consultor':
+            case 'Desenvolvedor':
                 roleBadgeClasses += "bg-teal-100 text-teal-800 border border-teal-200";
-                roleLabel = "Consultor";
+                roleLabel = "Desenvolvedor";
+                break;
+            case 'Implantador':
+                roleBadgeClasses += "bg-yellow-100 text-yellow-800 border border-yellow-200";
+                roleLabel = "Implantador";
+                break;
+            case 'Suporte':
+                roleBadgeClasses += "bg-red-100 text-red-800 border border-red-200";
+                roleLabel = "Suporte";
                 break;
             default:
                 roleBadgeClasses += "bg-gray-100 text-gray-800 border border-gray-200";
         }
 
         const statusBadgeClasses = `inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${usuario.fl_ativo
-                ? "bg-green-100 text-green-800 border border-green-200"
-                : "bg-red-100 text-red-800 border border-red-200"
+            ? "bg-green-100 text-green-800 border border-green-200"
+            : "bg-red-100 text-red-800 border border-red-200"
             }`;
 
         return (
@@ -384,7 +399,7 @@ export default function Usuarios() {
     };
 
     return (
-        <div className="p-3 sm:p-6 max-w-7xl mx-auto">
+        <div className="p-1 sm:p-4 max-w-7xl mx-auto">
             {/* Page header with title and action button */}
             <PageHeader
                 title="Usuários"

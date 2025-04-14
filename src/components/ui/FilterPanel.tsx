@@ -104,25 +104,25 @@ export function FilterPanel({ filters, onClearFilters }: FilterPanelProps) {
                     animate={{ opacity: 1, height: "auto" }}
                     exit={{ opacity: 0, height: 0 }}
                     transition={{ duration: 0.2 }}
-                    className="border-t border-gray-100 p-3 space-y-3 bg-gray-50/70 sm:hidden"
+                    className="border-t border-gray-100 p-3 space-y-3 bg-gray-50/70 sm:hidden w-full"
                 >
                     {filters.map((filter) => (
                         <div key={filter.name}>
                             <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">{filter.name}</label>
 
                             {filter.type === 'multi-toggle' && (
-                                <div className="flex space-x-2">
+                                <div className={`flex flex-wrap gap-2 ${filter.options.length > 4 ? 'flex-wrap' : ''}`}>
                                     {filter.options.map(option => (
                                         <button
                                             key={option.id}
                                             onClick={() => filter.onChange(option.value)}
-                                            className={`px-3 py-1.5 rounded-md text-sm font-medium flex-1 transition-colors ${filter.currentValue === option.value
-                                                    ? option.id === filter.options[0].id
-                                                        ? 'bg-gray-200 text-gray-800' // Default option style
-                                                        : option.id === filter.options[1].id
-                                                            ? 'bg-green-100 text-green-800 border border-green-200' // First non-default option
-                                                            : 'bg-red-100 text-red-800 border border-red-200' // Second non-default option
-                                                    : 'bg-white text-gray-600 border border-gray-200'
+                                            className={`px-3 py-1.5 rounded-md text-sm font-medium ${filter.options.length > 4 ? 'mb-1 flex-grow' : 'flex-1'} transition-colors ${filter.currentValue === option.value
+                                                ? option.id === filter.options[0].id
+                                                    ? 'bg-gray-200 text-gray-800' // Default option style
+                                                    : option.id === filter.options[1].id
+                                                        ? 'bg-green-100 text-green-800 border border-green-200' // First non-default option
+                                                        : 'bg-red-100 text-red-800 border border-red-200' // Second non-default option
+                                                : 'bg-white text-gray-600 border border-gray-200'
                                                 }`}
                                         >
                                             {option.label}
@@ -138,12 +138,12 @@ export function FilterPanel({ filters, onClearFilters }: FilterPanelProps) {
                                             key={option.id}
                                             onClick={() => filter.onChange(option.value)}
                                             className={`px-3 py-1.5 rounded-md text-sm font-medium flex-1 transition-colors ${filter.currentValue === option.value
-                                                    ? option.id === filter.options[0].id
-                                                        ? 'bg-gray-200 text-gray-800' // Default option
-                                                        : option.id === filter.options[1].id
-                                                            ? 'bg-green-100 text-green-800 border border-green-200' // First non-default option
-                                                            : 'bg-orange-100 text-orange-800 border border-orange-200' // Second non-default option
-                                                    : 'bg-white text-gray-600 border border-gray-200'
+                                                ? option.id === filter.options[0].id
+                                                    ? 'bg-gray-200 text-gray-800' // Default option
+                                                    : option.id === filter.options[1].id
+                                                        ? 'bg-green-100 text-green-800 border border-green-200' // First non-default option
+                                                        : 'bg-orange-100 text-orange-800 border border-orange-200' // Second non-default option
+                                                : 'bg-white text-gray-600 border border-gray-200'
                                                 }`}
                                         >
                                             {option.label}
@@ -204,18 +204,18 @@ export function FilterPanel({ filters, onClearFilters }: FilterPanelProps) {
                                 <label className="block text-sm font-medium text-gray-700 mb-1">{filter.name}</label>
 
                                 {filter.type === 'multi-toggle' && (
-                                    <div className="flex space-x-2">
+                                    <div className={`flex ${filter.options.length > 4 ? 'flex-wrap gap-1' : 'space-x-2'}`}>
                                         {filter.options.map(option => (
                                             <button
                                                 key={option.id}
                                                 onClick={() => filter.onChange(option.value)}
-                                                className={`px-3 py-1.5 rounded-md text-sm font-medium flex-1 transition-colors ${filter.currentValue === option.value
-                                                        ? option.id === filter.options[0].id
-                                                            ? 'bg-gray-200 text-gray-800'
-                                                            : option.id === filter.options[1].id
-                                                                ? 'bg-green-100 text-green-800'
-                                                                : 'bg-red-100 text-red-800'
-                                                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                                                className={`px-2 py-1.5 rounded-md text-sm font-medium ${filter.options.length > 4 ? 'mb-1 flex-grow' : 'flex-1'} transition-colors ${filter.currentValue === option.value
+                                                    ? option.id === filter.options[0].id
+                                                        ? 'bg-gray-200 text-gray-800'
+                                                        : option.id === filter.options[1].id
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : 'bg-red-100 text-red-800'
+                                                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
                                                     }`}
                                             >
                                                 {option.label}
@@ -231,12 +231,12 @@ export function FilterPanel({ filters, onClearFilters }: FilterPanelProps) {
                                                 key={option.id}
                                                 onClick={() => filter.onChange(option.value)}
                                                 className={`px-3 py-1.5 rounded-md text-sm font-medium flex-1 transition-colors ${filter.currentValue === option.value
-                                                        ? option.id === filter.options[0].id
-                                                            ? 'bg-gray-200 text-gray-800'
-                                                            : option.id === filter.options[1].id
-                                                                ? 'bg-green-100 text-green-800'
-                                                                : 'bg-orange-100 text-orange-800'
-                                                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                                                    ? option.id === filter.options[0].id
+                                                        ? 'bg-gray-200 text-gray-800'
+                                                        : option.id === filter.options[1].id
+                                                            ? 'bg-green-100 text-green-800'
+                                                            : 'bg-orange-100 text-orange-800'
+                                                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
                                                     }`}
                                             >
                                                 {option.label}
