@@ -374,13 +374,13 @@ export default function CadastroCliente() {
     };
 
     return (
-        <div className="p-1 sm:p-6 max-w-7xl mx-auto">
+        <div className="p-1 sm:p-5 max-w-7xl mx-auto">
             {/* Cabeçalho da página */}
-            <div className="mb-6">
-                <div className="flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-800">Novo Cliente</h1>
+            <div className="mb-6 gap-4">
+                <div className="flex-1">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 tracking-tight">Novo Cliente</h1>
                 </div>
-                <p className="text-gray-500 mt-1">Preencha os campos abaixo para cadastrar um novo cliente no sistema</p>
+                <p className="text-sm sm:text-base text-gray-500 mt-1">Preencha os campos abaixo para cadastrar um novo cliente no sistema</p>
             </div>
 
             {/* Formulário */}
@@ -1232,9 +1232,9 @@ export default function CadastroCliente() {
                             <h2 className="text-lg font-semibold text-gray-800">Informações Alfasig</h2>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-x-6 gap-y-5">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5">
                             {/* Franquia NF */}
-                            <div className="relative md:col-span-2">
+                            <div className="relative md:col-span-1">
                                 <label htmlFor="ds_franquia_nf" className="text-sm font-medium text-gray-700 mb-1 block">
                                     Franquia NF <span className="text-red-500">*</span>
                                 </label>
@@ -1270,7 +1270,7 @@ export default function CadastroCliente() {
                         {formData.ds_franquia_nf === 'Colet' && (
                             <>
                                 {/* Additional Colet fields */}
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-x-6 gap-y-5 mt-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-5 mt-6">
                                     {/* Quantidade de Documentos */}
                                     <div className="relative">
                                         <label htmlFor="nr_qtde_documentos" className="text-sm font-medium text-gray-700 mb-1 block">

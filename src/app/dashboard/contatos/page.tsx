@@ -44,7 +44,7 @@ interface ContactPayload {
 }
 
 // Modal mode type
-type ModalMode = 'create' | 'edit' ;
+type ModalMode = 'create' | 'edit';
 
 export default function Contatos() {
     const [contacts, setContacts] = useState<Contact[]>([]);
@@ -463,7 +463,7 @@ export default function Contatos() {
     }
 
     return (
-        <div className="p-1 sm:p-4 max-w-7xl mx-auto">
+        <div className="p-1 sm:p-5 max-w-7xl mx-auto">
             {/* Page header with title and action button */}
             <PageHeader
                 title="Contatos"

@@ -5,8 +5,8 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { Calendar, ClipboardList, Edit, Plus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-
 // Import our reusable components
 import { ActiveFilters } from '@/components/ui/ActiveFilters';
 import { Column, DataTable } from '@/components/ui/DataTable';
@@ -75,6 +75,7 @@ interface RATPayload {
 type ModalMode = 'create' | 'edit' | 'view';
 
 export default function RATs() {
+    const router = useRouter();
     const [rats, setRATs] = useState<RAT[]>([]);
     const [filteredRATs, setFilteredRATs] = useState<RAT[]>([]);
     const [loading, setLoading] = useState(true);
@@ -516,9 +517,7 @@ export default function RATs() {
 
     // Handle create new RAT
     const handleCreateNewRAT = () => {
-        setCurrentRAT(null);
-        setModalMode('create');
-        setIsModalOpen(true);
+        router.push('/dashboard/rats/cadastro');
     };
 
     // Display full-screen loading spinner while data is being loaded initially
@@ -527,7 +526,7 @@ export default function RATs() {
     }
 
     return (
-        <div className="p-1 sm:p-4 max-w-7xl mx-auto">
+        <div className="p-1 sm:p-5 max-w-7xl mx-auto">
             {/* Page header with title and action button */}
             <PageHeader
                 title="Registros de Atendimento"
