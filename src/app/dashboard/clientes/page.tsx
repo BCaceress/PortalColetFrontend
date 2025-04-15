@@ -2,7 +2,7 @@
 
 import api from '@/services/api';
 import { motion } from 'framer-motion';
-import { Building2, Edit, Eye, Plus } from 'lucide-react';
+import { Building2, Eye, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -68,21 +68,14 @@ export default function Clientes() {
     const [loading, setLoading] = useState(true);
     const [error, setError,] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'todos' | 'ativos' | 'inativos'>('todos');
+    const [statusFilter, setStatusFilter] = useState<'todos' | 'implantação' | 'produção' | 'restrição' | 'inativo'>('todos');
     const [contatosFilter, setContatosFilter] = useState<'todos' | 'com' | 'sem'>('todos');
     const [matrizFilter, setMatrizFilter] = useState<'todos' | 'matriz' | 'filial'>('todos');
     const [animateItems, setAnimateItems] = useState(false);
 
     // Função para visualizar detalhes do cliente
     const handleViewClientDetails = (cliente: Cliente) => {
-        // TODO: Implementar visualização detalhada do cliente 
-        // Por enquanto vamos navegar para a tela de edição que já tem os detalhes
-        router.push(`/dashboard/clientes/editar/${cliente.id_cliente}`);
-    };
-
-    // Função para editar cliente
-    const handleEditClient = (cliente: Cliente) => {
-        router.push(`/dashboard/clientes/editar/${cliente.id_cliente}`);
+        router.push(`/dashboard/clientes/visualizar/${cliente.id_cliente}`);
     };
 
     // Função para cadastrar novo cliente
@@ -117,7 +110,7 @@ export default function Clientes() {
         filterClientes(term, statusFilter, contatosFilter, matrizFilter);
     };
 
-    const handleStatusFilter = (status: 'todos' | 'ativos' | 'inativos') => {
+    const handleStatusFilter = (status: 'todos' | 'implantação' | 'produção' | 'restrição' | 'inativo') => {
         setStatusFilter(status);
         filterClientes(searchTerm, status, contatosFilter, matrizFilter);
     };
@@ -141,7 +134,7 @@ export default function Clientes() {
 
     const filterClientes = (
         term: string,
-        status: 'todos' | 'ativos' | 'inativos',
+        status: 'todos' | 'implantação' | 'produção' | 'restrição' | 'inativo',
         contatos: 'todos' | 'com' | 'sem',
         matriz: 'todos' | 'matriz' | 'filial'
     ) => {
@@ -161,7 +154,9 @@ export default function Clientes() {
             }
 
             if (status !== 'todos') {
-                filtered = filtered.filter(cliente => (status === 'ativos' ? cliente.fl_ativo : !cliente.fl_ativo));
+                filtered = filtered.filter(cliente =>
+                    cliente.ds_situacao.toLowerCase() === status.toLowerCase()
+                );
             }
 
             if (contatos !== 'todos') {
@@ -185,7 +180,7 @@ export default function Clientes() {
     const activeFilters = [
         ...(statusFilter !== 'todos' ? [{
             id: 'status',
-            label: statusFilter === 'ativos' ? 'Ativo' : 'Inativo',
+            label: statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1),
             type: 'status' as const,
             onRemove: () => handleStatusFilter('todos')
         }] : []),
@@ -206,12 +201,14 @@ export default function Clientes() {
     // Create filter configurations for the FilterPanel
     const filterConfig = [
         {
-            name: 'Status',
+            name: 'Situação',
             type: 'multi-toggle' as const,
             options: [
                 { id: 'todos', label: 'Todos', value: 'todos' },
-                { id: 'ativos', label: 'Ativos', value: 'ativos' },
-                { id: 'inativos', label: 'Inativos', value: 'inativos' }
+                { id: 'implantação', label: 'Implantação', value: 'implantação' },
+                { id: 'produção', label: 'Produção', value: 'produção' },
+                { id: 'restrição', label: 'Restrição', value: 'restrição' },
+                { id: 'inativo', label: 'Inativo', value: 'inativo' }
             ],
             currentValue: statusFilter,
             onChange: handleStatusFilter
@@ -338,27 +335,16 @@ export default function Clientes() {
         }
     ];
 
-    // Row actions
+    // Row actions - Only view button now
     const clienteActions = (cliente: Cliente) => (
         <>
-            <motion.button
+            <button
                 onClick={() => handleViewClientDetails(cliente)}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.97 }}
                 className="p-1 text-gray-500 rounded hover:bg-gray-100 transition-colors"
                 title="Ver detalhes"
             >
                 <Eye size={18} />
-            </motion.button>
-            <motion.button
-                onClick={() => handleEditClient(cliente)}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.97 }}
-                className="p-1 text-amber-600 rounded hover:bg-amber-50 transition-colors"
-                title="Editar"
-            >
-                <Edit size={18} />
-            </motion.button>
+            </button>
         </>
     );
 
@@ -445,18 +431,6 @@ export default function Clientes() {
                 >
                     <Eye size={14} />
                     Ver
-                </motion.button>
-                <motion.button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        handleEditClient(cliente);
-                    }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="px-3 py-1 text-xs font-medium text-amber-700 bg-amber-50 rounded-md hover:bg-amber-100 flex items-center gap-1"
-                >
-                    <Edit size={14} />
-                    Editar
                 </motion.button>
             </div>
         </div>

@@ -71,11 +71,11 @@ export default function DashboardLayout({
                     className={`
                         flex-1 transition-all duration-300 ease-in-out 
                         overflow-auto h-[calc(100vh-64px)] w-full
-                        ${collapsed ? 'lg:ml-0 pl-0' : 'lg:ml-4 pl-0'}
+                        ${collapsed ? 'lg:ml-0 pl-0' : 'lg:ml-0 pl-0'}
                         ${isFullscreen ? 'ml-0' : ''}
                     `}
                 >
-                    <div className="pl-0 sm:pl-1">
+                    <div className="pl-0 sm:pl-0">
                         {children}
                     </div>
                 </div>
