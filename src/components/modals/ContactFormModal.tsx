@@ -1,31 +1,23 @@
 'use client';
 
 import api from '@/services/api';
-import { FileEdit, Info, Loader2, Phone, Save, ShieldAlert, UserPlus } from 'lucide-react';
+import { Contato, ContatoPayload } from '@/types/contatos';
+import { ModalMode } from '@/types/modal';
+import { formatPhoneNumber } from '@/utils/formatters';
+import { Check, ChevronsUpDown, FileEdit, Loader2, Save, ShieldAlert, UserPlus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { FormModal } from './FormModal';
 
-// Types
-interface Contato {
-    id_contato?: number;
-    nome: string;
-    email: string;
-    telefone: string;
-    empresa: string;
-    cargo: string;
-    fl_ativo: boolean;
+// Define client interface
+interface Cliente {
+    id_cliente: number;
+    ds_nome: string;
 }
 
-interface ContatoPayload {
-    nome: string;
-    email: string;
-    telefone: string;
-    empresa: string;
-    cargo: string;
-    fl_ativo: boolean;
+// Extended payload to include client IDs
+interface ExtendedContatoPayload extends ContatoPayload {
+    id_clientes?: number[];
 }
-
-type ModalMode = 'create' | 'edit' | 'view';
 
 interface ContactFormModalProps {
     isOpen: boolean;
@@ -45,13 +37,15 @@ export function ContactFormModal({
     onError
 }: ContactFormModalProps) {
     // Form state
-    const [formData, setFormData] = useState<ContatoPayload>({
-        nome: '',
-        email: '',
-        telefone: '',
-        empresa: '',
-        cargo: '',
-        fl_ativo: true
+    const [formData, setFormData] = useState<ExtendedContatoPayload>({
+        ds_nome: '',
+        ds_email: '',
+        ds_telefone: '',
+        ds_cargo: '',
+        fl_ativo: true,
+        fl_whatsapp: false,
+        tx_observacoes: '',
+        id_clientes: []
     });
 
     // Form validation errors
@@ -60,17 +54,41 @@ export function ContactFormModal({
     // Loading state for form submission
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // State for client list and dropdown
+    const [clients, setClients] = useState<Cliente[]>([]);
+    const [isClientDropdownOpen, setIsClientDropdownOpen] = useState(false);
+    const [clientsLoading, setClientsLoading] = useState(false);
+
+    // Load clients on component mount
+    useEffect(() => {
+        async function loadClients() {
+            try {
+                setClientsLoading(true);
+                const response = await api.get('/clientes/lista/ativos');
+                setClients(response.data);
+            } catch (error) {
+                console.error('Erro ao carregar clientes:', error);
+            } finally {
+                setClientsLoading(false);
+            }
+        }
+
+        loadClients();
+    }, []);
+
     // Custom onClose handler that resets form data and errors
     const handleClose = () => {
         // Reset to initial state if in create mode (não resetamos em edit para preservar mudanças)
         if (modalMode === 'create') {
             setFormData({
-                nome: '',
-                email: '',
-                telefone: '',
-                empresa: '',
-                cargo: '',
-                fl_ativo: true
+                ds_nome: '',
+                ds_email: '',
+                ds_telefone: '',
+                ds_cargo: '',
+                fl_ativo: true,
+                fl_whatsapp: false,
+                tx_observacoes: '',
+                id_clientes: []
             });
         }
         // Reset validation errors
@@ -81,24 +99,52 @@ export function ContactFormModal({
 
     // Initialize form data when modal opens or contact changes
     useEffect(() => {
-        if (currentContact && (modalMode === 'edit' || modalMode === 'view')) {
-            setFormData({
-                nome: currentContact.nome,
-                email: currentContact.email,
-                telefone: currentContact.telefone,
-                empresa: currentContact.empresa,
-                cargo: currentContact.cargo,
-                fl_ativo: currentContact.fl_ativo
-            });
+        if (currentContact && modalMode === 'edit') {
+            // Fetch contact details using GET /contatos/{id_contato}
+            async function fetchContactDetails() {
+                try {
+                    const response = await api.get(`/contatos/${currentContact.id_contato}`);
+                    const contactDetails = response.data;
+
+                    // Set form data with fetched details
+                    setFormData({
+                        ds_nome: contactDetails.ds_nome,
+                        ds_email: contactDetails.ds_email,
+                        ds_telefone: contactDetails.ds_telefone || '',
+                        ds_cargo: contactDetails.ds_cargo,
+                        fl_ativo: contactDetails.fl_ativo,
+                        fl_whatsapp: contactDetails.fl_whatsapp || false,
+                        tx_observacoes: contactDetails.tx_observacoes || '',
+                        id_clientes: contactDetails.clientes?.map((cliente: any) => cliente.id_cliente) || []
+                    });
+                } catch (error) {
+                    console.error('Erro ao carregar detalhes do contato:', error);
+                    // Fallback to using currentContact data if API call fails
+                    setFormData({
+                        ds_nome: currentContact.ds_nome,
+                        ds_email: currentContact.ds_email,
+                        ds_telefone: currentContact.ds_telefone || '',
+                        ds_cargo: currentContact.ds_cargo,
+                        fl_ativo: currentContact.fl_ativo,
+                        fl_whatsapp: currentContact.fl_whatsapp || false,
+                        tx_observacoes: currentContact.tx_observacoes || '',
+                        id_clientes: []
+                    });
+                }
+            }
+
+            fetchContactDetails();
         } else {
             // Reset form for create mode - sempre com fl_ativo como true
             setFormData({
-                nome: '',
-                email: '',
-                telefone: '',
-                empresa: '',
-                cargo: '',
-                fl_ativo: true
+                ds_nome: '',
+                ds_email: '',
+                ds_telefone: '',
+                ds_cargo: '',
+                fl_ativo: true,
+                fl_whatsapp: false,
+                tx_observacoes: '',
+                id_clientes: []
             });
         }
 
@@ -107,7 +153,7 @@ export function ContactFormModal({
     }, [currentContact, modalMode, isOpen]);
 
     // Handle input changes
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
 
@@ -121,32 +167,63 @@ export function ContactFormModal({
         }
     };
 
+    // Handle phone input changes with formatting
+    const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const formattedPhone = formatPhoneNumber(e.target.value);
+        setFormData(prev => ({ ...prev, ds_telefone: formattedPhone }));
+
+        // Clear validation error when user types
+        if (formErrors.ds_telefone) {
+            setFormErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors.ds_telefone;
+                return newErrors;
+            });
+        }
+    };
+
     // Handle checkbox change
     const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, checked } = e.target;
         setFormData(prev => ({ ...prev, [name]: checked }));
     };
 
+    // Handle client selection
+    const handleClientToggle = (clientId: number) => {
+        setFormData(prev => {
+            const currentClients = prev.id_clientes || [];
+            if (currentClients.includes(clientId)) {
+                // Remove client if already selected
+                return {
+                    ...prev,
+                    id_clientes: currentClients.filter(id => id !== clientId)
+                };
+            } else {
+                // Add client if not selected
+                return {
+                    ...prev,
+                    id_clientes: [...currentClients, clientId]
+                };
+            }
+        });
+    };
+
     // Form validation
     const validateForm = (): boolean => {
         const errors: Record<string, string> = {};
 
-        if (!formData.nome.trim()) {
-            errors.nome = 'Nome é obrigatório';
+        if (!formData.ds_nome.trim()) {
+            errors.ds_nome = 'Nome é obrigatório';
         }
 
-        if (!formData.email.trim()) {
-            errors.email = 'E-mail é obrigatório';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            errors.email = 'E-mail inválido';
+        if (!formData.ds_email.trim()) {
+            errors.ds_email = 'E-mail é obrigatório';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.ds_email)) {
+            errors.ds_email = 'E-mail inválido';
         }
 
-        if (!formData.telefone.trim()) {
-            errors.telefone = 'Telefone é obrigatório';
-        }
-
-        if (!formData.empresa.trim()) {
-            errors.empresa = 'Empresa é obrigatória';
+        if (!formData.ds_cargo.trim()) {
+            errors.ds_cargo = 'Cargo é obrigatório';
         }
 
         setFormErrors(errors);
@@ -157,12 +234,6 @@ export function ContactFormModal({
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Exit early for view mode
-        if (modalMode === 'view') {
-            onClose();
-            return;
-        }
-
         // Validate form
         if (!validateForm()) {
             return;
@@ -172,12 +243,16 @@ export function ContactFormModal({
 
         try {
             if (modalMode === 'create') {
-                // Create new contact
-                await api.post('/contatos', formData);
+                // Create new contact - sempre com fl_ativo como true
+                const payload = {
+                    ...formData,
+                    fl_ativo: true,
+                };
+                await api.post('/contatos', payload);
                 onSuccess?.('Contato criado com sucesso!');
             } else if (modalMode === 'edit') {
-                // Update existing contact
-                await api.put(`/contatos/${currentContact?.id_contato}`, formData);
+                // Update existing contact using PATCH instead of PUT
+                await api.patch(`/contatos/${currentContact?.id_contato}`, formData);
                 onSuccess?.('Contato atualizado com sucesso!');
             }
 
@@ -201,8 +276,6 @@ export function ContactFormModal({
                 return 'Adicionar Novo Contato';
             case 'edit':
                 return 'Editar Contato';
-            case 'view':
-                return 'Detalhes do Contato';
             default:
                 return 'Contato';
         }
@@ -215,8 +288,6 @@ export function ContactFormModal({
                 return <UserPlus size={20} className="mr-2 text-emerald-500" />;
             case 'edit':
                 return <FileEdit size={20} className="mr-2 text-amber-500" />;
-            case 'view':
-                return <Info size={20} className="mr-2 text-blue-500" />;
             default:
                 return null;
         }
@@ -228,8 +299,6 @@ export function ContactFormModal({
 
         if (formErrors[fieldName]) {
             return `${baseClasses} border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500`;
-        } else if (modalMode === 'view') {
-            return `${baseClasses} border-blue-200 bg-blue-50 text-gray-700`;
         } else if (modalMode === 'edit') {
             return `${baseClasses} border-gray-300 text-gray-700 placeholder-gray-400 focus:ring-amber-500 focus:border-amber-500`;
         } else {
@@ -250,275 +319,263 @@ export function ContactFormModal({
         }
     };
 
+    // Modified renderFormField function to support adding an icon/element inside the input
+    const renderFormField = (
+        label: string,
+        name: keyof ContatoPayload,
+        type: string = 'text',
+        placeholder: string = '',
+        required: boolean = false,
+        className: string = '',
+        inlineElement?: React.ReactNode
+    ) => (
+        <div className={`relative ${className}`}>
+            <label htmlFor={name} className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
+                {label}
+                {required && <span className="ml-1 text-red-500">*</span>}
+                {modalMode === 'edit' &&
+                    currentContact?.[name] !== undefined &&
+                    formData[name] !== currentContact[name as keyof Contato] && (
+                        <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                            Modificado
+                        </span>
+                    )}
+            </label>
+            <div className="relative">
+                <input
+                    type={type}
+                    id={name}
+                    name={name}
+                    value={formData[name] as string}
+                    onChange={name === 'ds_telefone' ? handlePhoneChange : handleChange}
+                    disabled={isSubmitting}
+                    className={`${getInputClasses(name as string)} ${inlineElement ? 'pr-12' : ''}`}
+                    placeholder={placeholder}
+                    required={required}
+                />
+                {inlineElement && (
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                        {inlineElement}
+                    </div>
+                )}
+            </div>
+            {formErrors[name as string] && (
+                <p className="mt-1.5 text-sm text-red-600 flex items-center">
+                    <ShieldAlert size={16} className="mr-1" />
+                    {formErrors[name as string]}
+                </p>
+            )}
+        </div>
+    );
+
+    // Renders a textarea field
+    const renderTextareaField = (
+        label: string,
+        name: keyof ContatoPayload,
+        placeholder: string = '',
+        rows: number = 2
+    ) => (
+        <div className="relative">
+            <label htmlFor={name} className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
+                {label}
+                {modalMode === 'edit' &&
+                    currentContact?.[name] !== undefined &&
+                    formData[name] !== currentContact[name as keyof Contato] && (
+                        <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
+                            Modificado
+                        </span>
+                    )}
+            </label>
+            <textarea
+                id={name}
+                name={name}
+                value={formData[name] as string}
+                onChange={handleChange}
+                disabled={isSubmitting}
+                className={getInputClasses(name as string)}
+                placeholder={placeholder}
+                rows={rows}
+            />
+        </div>
+    );
+
     return (
         <FormModal
             isOpen={isOpen}
             onClose={handleClose}
             title={getModalTitle()}
-            size="md"
+            size="2xl"
             mode={modalMode}
             icon={getModalIcon()}
         >
-            {modalMode === 'view' ? (
-                <div className="space-y-6">
-                    {/* Contact profile card with elegant design */}
-                    <div className="relative bg-white rounded-2xl border border-gray-100 shadow-lg overflow-hidden">
-                        {/* Background pattern */}
-                        <div
-                            className="absolute top-0 right-0 w-full h-32 bg-gradient-to-br from-blue-500/20 to-purple-500/20"
-                            style={{
-                                backgroundImage: 'radial-gradient(circle at 25px 25px, rgba(255, 255, 255, 0.2) 2px, transparent 0), radial-gradient(circle at 75px 75px, rgba(255, 255, 255, 0.2) 2px, transparent 0)',
-                                backgroundSize: '100px 100px'
-                            }}
-                        />
-
-                        {/* Contact avatar and name */}
-                        <div className="relative pt-8 px-6 pb-6 flex flex-col items-center border-b border-gray-100">
-                            <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-3xl font-medium shadow-lg mb-4">
-                                {formData.nome.slice(0, 1).toUpperCase()}
+            <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Nome e Cargo - mesma linha */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="relative">
+                        {renderFormField('Nome', 'ds_nome', 'text', 'Nome completo', true)}
+                        {/* Status (ativo/inativo) - apenas para edição e junto ao nome */}
+                        {modalMode === 'edit' && (
+                            <div className="absolute top-0 right-0 flex items-center">
+                                <input
+                                    id="fl_ativo"
+                                    name="fl_ativo"
+                                    type="checkbox"
+                                    checked={formData.fl_ativo}
+                                    onChange={handleCheckboxChange}
+                                    disabled={isSubmitting}
+                                    className="h-4 w-4 text-amber-500 border-gray-300 rounded focus:ring-amber-500"
+                                />
+                                <label htmlFor="fl_ativo" className="ml-2 block text-xs text-gray-600">
+                                    Contato Ativo
+                                </label>
                             </div>
-
-                            <h3 className="text-xl font-bold text-gray-800 mb-1 text-center">{formData.nome}</h3>
-                            <div className="flex items-center gap-2 mb-3">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                                    {formData.cargo}
-                                </span>
-
-                                <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${formData.fl_ativo
-                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                    : 'bg-red-100 text-red-800 border border-red-200'
-                                    }`}>
-                                    <span className={`mr-1.5 w-2 h-2 rounded-full ${formData.fl_ativo ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
-                                    {formData.fl_ativo ? 'Ativo' : 'Inativo'}
-                                </div>
-                            </div>
-                            <span className="text-sm text-gray-500 font-medium">{formData.empresa}</span>
-                        </div>
-
-                        {/* Contact details with icons */}
-                        <div className="p-6 space-y-5">
-                            {/* Email info */}
-                            <div className="flex items-center">
-                                <div className="flex-shrink-0 w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 mr-4">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                                        <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-gray-500 font-medium mb-0.5">E-mail</p>
-                                    <p className="text-sm text-gray-900 font-semibold">{formData.email}</p>
-                                </div>
-                            </div>
-
-                            {/* Phone info */}
-                            <div className="flex items-center">
-                                <div className="flex-shrink-0 w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center text-green-600 mr-4">
-                                    <Phone size={18} />
-                                </div>
-                                <div>
-                                    <p className="text-xs text-gray-500 font-medium mb-0.5">Telefone</p>
-                                    <p className="text-sm text-gray-900 font-semibold">{formData.telefone}</p>
-                                </div>
-                            </div>
-
-                            {/* Company info */}
-                            <div className="flex items-center">
-                                <div className="flex-shrink-0 w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center text-purple-600 mr-4">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 110 2h-3a1 1 0 01-1-1v-2a1 1 0 00-1-1H9a1 1 0 00-1 1v2a1 1 0 01-1 1H4a1 1 0 110-2V4zm3 1h2v2H7V5zm2 4H7v2h2V9zm2-4h2v2h-2V5zm2 4h-2v2h2V9z" clipRule="evenodd" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-gray-500 font-medium mb-0.5">Empresa</p>
-                                    <p className="text-sm text-gray-900 font-semibold">{formData.empresa}</p>
-                                </div>
-                            </div>
-                        </div>
+                        )}
                     </div>
+                    {renderFormField('Cargo', 'ds_cargo', 'text', 'Cargo na empresa', true)}
                 </div>
-            ) : (
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    {/* Nome */}
-                    <div className="relative">
-                        <label htmlFor="nome" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                            Nome
-                            {modalMode === 'edit' && currentContact?.nome && formData.nome !== currentContact.nome && (
-                                <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Modificado</span>
-                            )}
-                        </label>
-                        <input
-                            type="text"
-                            id="nome"
-                            name="nome"
-                            value={formData.nome}
-                            onChange={handleChange}
-                            disabled={isSubmitting || modalMode === 'view'}
-                            className={getInputClasses('nome')}
-                            placeholder="Nome completo"
-                        />
-                        {formErrors.nome && (
-                            <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                <ShieldAlert size={16} className="mr-1" />
-                                {formErrors.nome}
-                            </p>
-                        )}
-                    </div>
 
-                    {/* Email */}
-                    <div className="relative">
-                        <label htmlFor="email" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                            E-mail
-                            {modalMode === 'edit' && currentContact?.email && formData.email !== currentContact.email && (
-                                <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Modificado</span>
-                            )}
-                        </label>
-                        <input
-                            type="email"
-                            id="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            disabled={isSubmitting || modalMode === 'view'}
-                            className={getInputClasses('email')}
-                            placeholder="email@exemplo.com.br"
-                        />
-                        {formErrors.email && (
-                            <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                <ShieldAlert size={16} className="mr-1" />
-                                {formErrors.email}
-                            </p>
-                        )}
-                    </div>
+                {/* Email e Telefone+WhatsApp - email na linha inteira, telefone e whatsapp na linha abaixo */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {renderFormField('E-mail', 'ds_email', 'email', 'email@exemplo.com.br', true)}
 
-                    {/* Telefone */}
-                    <div className="relative">
-                        <label htmlFor="telefone" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                            Telefone
-                            {modalMode === 'edit' && currentContact?.telefone && formData.telefone !== currentContact.telefone && (
-                                <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Modificado</span>
-                            )}
-                        </label>
-                        <input
-                            type="text"
-                            id="telefone"
-                            name="telefone"
-                            value={formData.telefone}
-                            onChange={handleChange}
-                            disabled={isSubmitting || modalMode === 'view'}
-                            className={getInputClasses('telefone')}
-                            placeholder="(00) 00000-0000"
-                        />
-                        {formErrors.telefone && (
-                            <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                <ShieldAlert size={16} className="mr-1" />
-                                {formErrors.telefone}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Empresa */}
-                    <div className="relative">
-                        <label htmlFor="empresa" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                            Empresa
-                            {modalMode === 'edit' && currentContact?.empresa && formData.empresa !== currentContact.empresa && (
-                                <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Modificado</span>
-                            )}
-                        </label>
-                        <input
-                            type="text"
-                            id="empresa"
-                            name="empresa"
-                            value={formData.empresa}
-                            onChange={handleChange}
-                            disabled={isSubmitting || modalMode === 'view'}
-                            className={getInputClasses('empresa')}
-                            placeholder="Nome da empresa"
-                        />
-                        {formErrors.empresa && (
-                            <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                                <ShieldAlert size={16} className="mr-1" />
-                                {formErrors.empresa}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* Cargo */}
-                    <div className="relative">
-                        <label htmlFor="cargo" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-                            Cargo
-                            {modalMode === 'edit' && currentContact?.cargo && formData.cargo !== currentContact.cargo && (
-                                <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Modificado</span>
-                            )}
-                        </label>
-                        <input
-                            type="text"
-                            id="cargo"
-                            name="cargo"
-                            value={formData.cargo}
-                            onChange={handleChange}
-                            disabled={isSubmitting || modalMode === 'view'}
-                            className={getInputClasses('cargo')}
-                            placeholder="Cargo na empresa"
-                        />
-                    </div>
-
-                    {/* Status (ativo/inativo) - apenas para edição */}
-                    {modalMode === 'edit' && (
-                        <div className="flex items-center">
+                    {renderFormField(
+                        'Telefone',
+                        'ds_telefone',
+                        'text',
+                        '(00) 00000-0000',
+                        false,
+                        '',
+                        <div className="flex items-center space-x-1 bg-gray-50 rounded-md px-2 py-1">
                             <input
-                                id="fl_ativo"
-                                name="fl_ativo"
+                                id="fl_whatsapp"
+                                name="fl_whatsapp"
                                 type="checkbox"
-                                checked={formData.fl_ativo}
+                                checked={formData.fl_whatsapp}
                                 onChange={handleCheckboxChange}
                                 disabled={isSubmitting}
-                                className="h-4 w-4 text-emerald-500 border-gray-300 rounded focus:ring-emerald-500"
+                                className={`h-4 w-4 ${modalMode === 'edit' ? 'text-amber-500 focus:ring-amber-500' : 'text-emerald-500 focus:ring-emerald-500'} border-gray-300 rounded`}
                             />
-                            <label htmlFor="fl_ativo" className="ml-2 block text-sm text-gray-700">
-                                Contato ativo
+                            <label htmlFor="fl_whatsapp" className="text-xs text-gray-700 whitespace-nowrap">
+                                WhatsApp
                             </label>
                         </div>
                     )}
+                </div>
 
-                    {/* Action buttons */}
-                    <div className="flex justify-end space-x-3 pt-4 mt-6 border-t border-gray-100">
-                        {/* Cancel button */}
-                        <button
-                            type="button"
-                            onClick={handleClose}
-                            disabled={isSubmitting}
-                            className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-all duration-200"
-                        >
-                            Cancelar
-                        </button>
+                {/* Client selector */}
+                <div className="relative">
+                    <label className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
+                        Clientes vinculados
+                    </label>
 
-                        {/* Submit button */}
-                        <button
-                            type="submit"
-                            disabled={isSubmitting || modalMode === 'view'}
-                            className={getPrimaryButtonStyles()}
-                        >
-                            {isSubmitting ? (
-                                <>
-                                    <Loader2 size={18} className="mr-2 animate-spin" />
-                                    <span>Salvando...</span>
-                                </>
-                            ) : modalMode === 'create' ? (
-                                <>
-                                    <UserPlus size={18} className="mr-2" />
-                                    <span>Adicionar</span>
-                                </>
-                            ) : (
-                                <>
-                                    <Save size={18} className="mr-2" />
-                                    <span>Salvar</span>
-                                </>
-                            )}
-                        </button>
+                    {/* Selected clients display - ajustando a cor da fonte */}
+                    <div className="mb-2 flex flex-wrap gap-2">
+                        {formData.id_clientes && formData.id_clientes.map(clientId => {
+                            const client = clients.find(c => c.id_cliente === clientId);
+                            return client ? (
+                                <div
+                                    key={client.id_cliente}
+                                    className={`rounded-full px-3 py-1 text-sm flex items-center ${modalMode === 'edit'
+                                        ? 'bg-amber-50 text-amber-900'
+                                        : 'bg-emerald-50 text-emerald-900'
+                                        }`}
+                                >
+                                    {client.ds_nome}
+                                    <button
+                                        type="button"
+                                        onClick={() => handleClientToggle(client.id_cliente)}
+                                        className={`ml-2 ${modalMode === 'edit'
+                                            ? 'text-amber-700 hover:text-red-500'
+                                            : 'text-emerald-700 hover:text-red-500'
+                                            }`}
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            ) : null;
+                        })}
                     </div>
-                </form>
-            )}
+
+                    {/* Dropdown trigger */}
+                    <button
+                        type="button"
+                        onClick={() => setIsClientDropdownOpen(!isClientDropdownOpen)}
+                        className={`${getInputClasses('id_clientes')} text-left flex items-center justify-between`}
+                        disabled={isSubmitting || clientsLoading}
+                    >
+                        <span className="block truncate text-gray-500">
+                            {clientsLoading ? 'Carregando clientes...' : 'Selecione os clientes'}
+                        </span>
+                        <ChevronsUpDown size={18} className="ml-2 opacity-50" />
+                    </button>
+
+                    {/* Dropdown menu */}
+                    {isClientDropdownOpen && (
+                        <div className="absolute z-10 mt-1 w-full max-h-60 overflow-auto bg-white border border-gray-300 rounded-md shadow-lg">
+                            <ul className="py-1">
+                                {clients.length === 0 ? (
+                                    <li className="px-4 py-2 text-sm text-gray-500">
+                                        Nenhum cliente disponível
+                                    </li>
+                                ) : (
+                                    clients.map(client => (
+                                        <li
+                                            key={client.id_cliente}
+                                            onClick={() => handleClientToggle(client.id_cliente)}
+                                            className="px-4 py-2 text-sm cursor-pointer text-gray-800 hover:bg-gray-100 flex items-center justify-between"
+                                        >
+                                            <span>{client.ds_nome}</span>
+                                            {formData.id_clientes?.includes(client.id_cliente) && (
+                                                <Check size={18} className="text-emerald-500" />
+                                            )}
+                                        </li>
+                                    ))
+                                )}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+
+                {/* Observações */}
+                {renderTextareaField('Observações', 'tx_observacoes', 'Informações adicionais sobre o contato')}
+
+                {/* Action buttons */}
+                <div className="flex justify-end space-x-3 pt-4 mt-6 border-t border-gray-100">
+                    {/* Cancel button */}
+                    <button
+                        type="button"
+                        onClick={handleClose}
+                        disabled={isSubmitting}
+                        className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 transition-all duration-200"
+                    >
+                        Cancelar
+                    </button>
+
+                    {/* Submit button */}
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className={getPrimaryButtonStyles()}
+                    >
+                        {isSubmitting ? (
+                            <>
+                                <Loader2 size={18} className="mr-2 animate-spin" />
+                                <span>Salvando...</span>
+                            </>
+                        ) : modalMode === 'create' ? (
+                            <>
+                                <UserPlus size={18} className="mr-2" />
+                                <span>Adicionar</span>
+                            </>
+                        ) : (
+                            <>
+                                <Save size={18} className="mr-2" />
+                                <span>Salvar</span>
+                            </>
+                        )}
+                    </button>
+                </div>
+            </form>
         </FormModal>
     );
 }

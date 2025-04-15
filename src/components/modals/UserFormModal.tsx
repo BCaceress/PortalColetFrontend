@@ -258,7 +258,7 @@ export function UserFormModal({
       isOpen={isOpen}
       onClose={handleClose}
       title={getModalTitle()}
-      size="md"
+      size="xl" // Changed from "md" to "lg" to make the modal wider
       mode={modalMode}
       icon={getModalIcon()}
     >

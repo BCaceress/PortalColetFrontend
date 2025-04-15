@@ -82,7 +82,7 @@ export function FormModal({
         <div className="fixed inset-0 z-50 overflow-y-auto bg-gray-900/20 backdrop-blur-[2px]">
             {/* Backdrop */}
             <div
-                className="fixed inset-0 bg-black bg-opacity-40 transition-opacity"
+                className="fixed inset-0 bg-gray-500/20 transition-opacity"
                 aria-hidden="true"
                 onClick={(e) => e.stopPropagation()}
             />

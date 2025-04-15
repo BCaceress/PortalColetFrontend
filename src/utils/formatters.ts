@@ -49,6 +49,32 @@ export const formatCEP = (value: string): string => {
 };
 
 /**
+ * Formata um número de telefone brasileiro aplicando a máscara 
+ * (XX) XXXXX-XXXX para celular ou (XX) XXXX-XXXX para telefone fixo
+ * @param value String contendo o número de telefone (com ou sem formatação)
+ * @returns Telefone formatado
+ */
+export const formatPhoneNumber = (value: string): string => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+
+    // Check if it's a mobile number (with 9 digits after DDD) or landline
+    if (digits.length > 10) {
+        // Mobile phone: (XX) XXXXX-XXXX
+        return digits
+            .replace(/(\d{2})(\d)/, '($1) $2')
+            .replace(/(\d{5})(\d)/, '$1-$2')
+            .replace(/(-\d{4})\d+?$/, '$1');
+    } else {
+        // Landline: (XX) XXXX-XXXX
+        return digits
+            .replace(/(\d{2})(\d)/, '($1) $2')
+            .replace(/(\d{4})(\d)/, '$1-$2')
+            .replace(/(-\d{4})\d+?$/, '$1');
+    }
+};
+
+/**
  * Interface para o retorno da API ViaCEP
  */
 export interface ViaCEPResponse {
