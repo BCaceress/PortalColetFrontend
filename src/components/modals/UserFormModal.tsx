@@ -323,30 +323,90 @@ export function UserFormModal({
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Nome */}
-          <div className="relative">
-            <label htmlFor="nome" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-              Nome
-              {modalMode === 'edit' && currentUser?.nome && formData.nome !== currentUser.nome && (
-                <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Modificado</span>
+          {/* Nome and Função on the same line */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Nome and checkbox */}
+            <div className="relative">
+              <div className="flex items-center justify-between mb-1.5">
+                <label htmlFor="nome" className="flex items-center text-sm font-medium text-gray-700">
+                  Nome
+                  {modalMode === 'edit' && currentUser?.nome && formData.nome !== currentUser.nome && (
+                    <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Modificado</span>
+                  )}
+                </label>
+                {/* Status (ativo/inativo) - apenas para edição */}
+                {modalMode === 'edit' && (
+                  <div className="flex items-center">
+                    <input
+                      id="fl_ativo"
+                      name="fl_ativo"
+                      type="checkbox"
+                      checked={formData.fl_ativo}
+                      onChange={handleCheckboxChange}
+                      disabled={isSubmitting}
+                      className="h-4 w-4 text-emerald-500 border-gray-300 rounded focus:ring-emerald-500"
+                    />
+                    <label htmlFor="fl_ativo" className="ml-2 block text-sm text-gray-700">
+                      Usuário Ativo
+                    </label>
+                  </div>
+                )}
+              </div>
+              <input
+                type="text"
+                id="nome"
+                name="nome"
+                value={formData.nome}
+                onChange={handleChange}
+                disabled={isSubmitting}
+                className={getInputClasses('nome')}
+                placeholder="Nome completo"
+              />
+              {formErrors.nome && (
+                <p className="mt-1.5 text-sm text-red-600 flex items-center">
+                  <ShieldAlert size={16} className="mr-1" />
+                  {formErrors.nome}
+                </p>
               )}
-            </label>
-            <input
-              type="text"
-              id="nome"
-              name="nome"
-              value={formData.nome}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              className={getInputClasses('nome')}
-              placeholder="Nome completo"
-            />
-            {formErrors.nome && (
-              <p className="mt-1.5 text-sm text-red-600 flex items-center">
-                <ShieldAlert size={16} className="mr-1" />
-                {formErrors.nome}
-              </p>
-            )}
+            </div>
+
+            {/* Função */}
+            <div className="relative">
+              <label htmlFor="funcao" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
+                Função
+                {modalMode === 'edit' && currentUser?.funcao && formData.funcao !== currentUser.funcao && (
+                  <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Modificado</span>
+                )}
+              </label>
+              <div className="relative">
+                <select
+                  id="funcao"
+                  name="funcao"
+                  value={formData.funcao}
+                  onChange={handleChange}
+                  disabled={isSubmitting}
+                  className={`${getInputClasses('funcao')} appearance-none pr-10`}
+                >
+                  <option value="" disabled>Escolher função</option>
+                  <option value="Administrador">Administrador</option>
+                  <option value="Analista">Analista</option>
+                  <option value="Desenvolvedor">Desenvolvedor</option>
+                  <option value="Implantador">Implantador</option>
+                  <option value="Suporte">Suporte</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
+              </div>
+              {formErrors.funcao && (
+                <p className="mt-1.5 text-sm text-red-600 flex items-center">
+                  <ShieldAlert size={16} className="mr-1" />
+                  {formErrors.funcao}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Email */}
@@ -374,56 +434,6 @@ export function UserFormModal({
               </p>
             )}
           </div>
-
-          {/* Função */}
-          <div className="relative">
-            <label htmlFor="funcao" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
-              Função
-              {modalMode === 'edit' && currentUser?.funcao && formData.funcao !== currentUser.funcao && (
-                <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Modificado</span>
-              )}
-            </label>
-            <div className="relative">
-              <select
-                id="funcao"
-                name="funcao"
-                value={formData.funcao}
-                onChange={handleChange}
-                disabled={isSubmitting}
-                className={`${getInputClasses('funcao')} appearance-none pr-10`}
-              >
-                <option value="" disabled>Escolher função</option>
-                <option value="Administrador">Administrador</option>
-                <option value="Analista">Analista</option>
-                <option value="Desenvolvedor">Desenvolvedor</option>
-                <option value="Implantador">Implantador</option>
-                <option value="Suporte">Suporte</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                </svg>
-              </div>
-            </div>
-          </div>
-
-          {/* Status (ativo/inativo) - apenas para edição */}
-          {modalMode === 'edit' && (
-            <div className="flex items-center">
-              <input
-                id="fl_ativo"
-                name="fl_ativo"
-                type="checkbox"
-                checked={formData.fl_ativo}
-                onChange={handleCheckboxChange}
-                disabled={isSubmitting}
-                className="h-4 w-4 text-emerald-500 border-gray-300 rounded focus:ring-emerald-500"
-              />
-              <label htmlFor="fl_ativo" className="ml-2 block text-sm text-gray-700">
-                Usuário ativo
-              </label>
-            </div>
-          )}
 
           {/* Senha - apenas para criação ou edição */}
           <div>
