@@ -40,11 +40,17 @@ interface ClientePayload {
     ds_regiao?: string;
     tx_observacao_contrato?: string;
     nr_codigo_zz?: string;
-    nr_franquia_nf?: number;
     nr_qtde_documentos?: number;
     nr_valor_franqia?: number;
     nr_valor_excendente?: number;
     dt_data_contrato?: string;
+    // Alfasig fields
+    ds_franquia_nf?: string;
+    fl_nfe?: boolean;
+    fl_nfse?: boolean;
+    fl_nfce?: boolean;
+    nr_qtde_pdv?: number;
+    nr_valor_pdv?: number;
 }
 
 export default function CadastroCliente() {
@@ -81,7 +87,7 @@ export default function CadastroCliente() {
         return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
     };
 
-    // Handle input changes
+    // In the handleChange function, add logic for Franquia NF
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -95,10 +101,10 @@ export default function CadastroCliente() {
             });
         }
 
-        // Verificar se o contrato é "Básico com Suporte" para habilitar os campos de Nomeados e Simultâneos
+        // Verificar se o contrato é "Básico" para habilitar os campos de Nomeados e Simultâneos
         if (name === 'ds_contrato') {
-            // Se não for "Básico com Suporte", limpa os valores de nomeados e simultâneos
-            if (value !== 'Básico com Suporte') {
+            // Se não for "Básico", limpa os valores de nomeados e simultâneos
+            if (value !== 'Básico') {
                 setFormData(prev => ({
                     ...prev,
                     nr_nomeados: undefined,
@@ -116,6 +122,24 @@ export default function CadastroCliente() {
                 }));
             }
         }
+
+        // Habilitar ou desabilitar campos Alfasig com base na Franquia NF
+        if (name === 'ds_franquia_nf') {
+            if (value === 'Alfasig') {
+                // Se Franquia NF for Alfasig, limpa todos os campos relacionados
+                setFormData(prev => ({
+                    ...prev,
+                    nr_qtde_documentos: undefined,
+                    nr_valor_franqia: undefined,
+                    nr_valor_excendente: undefined,
+                    fl_nfe: false,
+                    fl_nfse: false,
+                    fl_nfce: false,
+                    nr_qtde_pdv: undefined,
+                    nr_valor_pdv: undefined
+                }));
+            }
+        }
     };
 
     // Add a handler for time input
@@ -129,6 +153,16 @@ export default function CadastroCliente() {
     const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, checked } = e.target;
         setFormData(prev => ({ ...prev, [name]: checked }));
+
+        // If NFCE checkbox is changed, handle PDV fields
+        if (name === 'fl_nfce' && !checked) {
+            // If NFCE is unchecked, clear PDV fields
+            setFormData(prev => ({
+                ...prev,
+                nr_qtde_pdv: undefined,
+                nr_valor_pdv: undefined
+            }));
+        }
     };
 
     // Handle number input change
@@ -317,6 +351,12 @@ export default function CadastroCliente() {
             errors.ds_contrato = 'Contrato é obrigatório';
         }
 
+        // Validate ds_franquia_nf as required
+        if (!formData.ds_franquia_nf || !formData.ds_franquia_nf.trim()) {
+            errors.ds_franquia_nf = 'Franquia NF é obrigatória';
+        }
+
+
         setFormErrors(errors);
         return Object.keys(errors).length === 0;
     };
@@ -398,54 +438,74 @@ export default function CadastroCliente() {
                             <Building size={20} className="mr-2 text-blue-500" />
                             <h2 className="text-lg font-semibold text-gray-800">Dados de Identificação</h2>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-x-6 gap-y-5">
 
                             {/* Razão Social */}
                             <div className="relative md:col-span-2">
                                 <label htmlFor="ds_razao_social" className="text-sm font-medium text-gray-700 mb-1 block">
                                     Razão Social <span className="text-red-500">*</span>
                                 </label>
-                                <div className="flex items-center space-x-4">
-                                    <input
-                                        type="text"
-                                        id="ds_razao_social"
-                                        name="ds_razao_social"
-                                        value={formData.ds_razao_social}
-                                        onChange={handleChange}
-                                        disabled={isSubmitting}
-                                        className={`${getInputClasses('ds_razao_social')} flex-grow`}
-                                        placeholder="Razão social da empresa"
-                                    />
-                                    <div className="flex-shrink-0 w-28">
-                                        <div className="relative">
-                                            <select
-                                                id="fl_matriz"
-                                                name="fl_matriz"
-                                                value={formData.fl_matriz ? "m" : "f"}
-                                                onChange={(e) => {
-                                                    const value = e.target.value === "matriz";
-                                                    setFormData(prev => ({ ...prev, fl_matriz: value }));
-                                                }}
-                                                disabled={isSubmitting}
-                                                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 appearance-none"
-                                            >
-                                                <option value="m">Matriz</option>
-                                                <option value="f">Filial</option>
-                                            </select>
-                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                                                </svg>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                                <input
+                                    type="text"
+                                    id="ds_razao_social"
+                                    name="ds_razao_social"
+                                    value={formData.ds_razao_social}
+                                    onChange={handleChange}
+                                    disabled={isSubmitting}
+                                    className={`${getInputClasses('ds_razao_social')} w-full`}
+                                    placeholder="Razão social da empresa"
+                                />
                                 {formErrors.ds_razao_social && (
                                     <p className="mt-1 text-sm text-red-600 flex items-center">
                                         <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
                                         <span>{formErrors.ds_razao_social}</span>
                                     </p>
                                 )}
+                            </div>
+
+                            {/* Matriz/Filial */}
+                            <div className="relative md:col-span-1">
+                                <label htmlFor="fl_matriz" className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Tipo
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        id="fl_matriz"
+                                        name="fl_matriz"
+                                        value={formData.fl_matriz ? "m" : "f"}
+                                        onChange={(e) => {
+                                            const value = e.target.value === "m";
+                                            setFormData(prev => ({ ...prev, fl_matriz: value }));
+                                        }}
+                                        disabled={isSubmitting}
+                                        className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-700 appearance-none"
+                                    >
+                                        <option value="m">Matriz</option>
+                                        <option value="f">Filial</option>
+                                    </select>
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Código ZZ */}
+                            <div className="relative">
+                                <label htmlFor="nr_codigo_zz" className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Código ZZ
+                                </label>
+                                <input
+                                    type="text"
+                                    id="nr_codigo_zz"
+                                    name="nr_codigo_zz"
+                                    value={formData.nr_codigo_zz || ''}
+                                    onChange={handleChange}
+                                    disabled={isSubmitting}
+                                    className={getInputClasses('nr_codigo_zz')}
+                                    placeholder="Código ZZ"
+                                />
                             </div>
 
                             {/* Nome da Empresa */}
@@ -542,7 +602,7 @@ export default function CadastroCliente() {
                             </div>
 
                             {/* Observações */}
-                            <div className="relative md:col-span-2">
+                            <div className="relative md:col-span-4">
                                 <label htmlFor="tx_observacao_ident" className="text-sm font-medium text-gray-700 mb-1 block">
                                     Observações
                                 </label>
@@ -863,26 +923,42 @@ export default function CadastroCliente() {
                             <h2 className="text-lg font-semibold text-gray-800">Dados de Contrato</h2>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-x-6 gap-y-5">
-                            {/* Situação */}
-                            <div className="relative md:col-span-2">
-                                <label htmlFor="ds_situacao" className="text-sm font-medium text-gray-700 mb-1 block">
-                                    Situação <span className="text-red-500">*</span>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-x-6 gap-y-5">
+
+                            {/* Data do Contrato - Modificado para mês/ano */}
+                            <div className="relative">
+                                <label htmlFor="dt_data_contrato" className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Data Contrato (Mês/Ano)
+                                </label>
+                                <input
+                                    type="month"
+                                    id="dt_data_contrato"
+                                    name="dt_data_contrato"
+                                    value={formData.dt_data_contrato || ''}
+                                    onChange={handleChange}
+                                    disabled={isSubmitting}
+                                    className={getInputClasses('dt_data_contrato')}
+                                />
+                            </div>
+
+                            {/* Contrato - Agora é um select */}
+                            <div className="relative  md:col-span-2">
+                                <label htmlFor="ds_contrato" className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Contrato <span className="text-red-500">*</span>
                                 </label>
                                 <div className="relative">
                                     <select
-                                        id="ds_situacao"
-                                        name="ds_situacao"
-                                        value={formData.ds_situacao}
+                                        id="ds_contrato"
+                                        name="ds_contrato"
+                                        value={formData.ds_contrato || ''}
                                         onChange={handleChange}
                                         disabled={isSubmitting}
-                                        className={getSelectClasses('ds_situacao')}
+                                        className={getSelectClasses('ds_contrato')}
                                     >
                                         <option value="">Selecione</option>
-                                        <option value="Implantação">Implantação</option>
-                                        <option value="Produção">Produção</option>
-                                        <option value="Restrição">Restrição</option>
-                                        <option value="Inativo">Inativo</option>
+                                        <option value="Avançado">Avançado</option>
+                                        <option value="Intermediário">Intermediário</option>
+                                        <option value="Básico">Básico</option>
                                     </select>
                                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -890,16 +966,87 @@ export default function CadastroCliente() {
                                         </svg>
                                     </div>
                                 </div>
-                                {formErrors.ds_situacao && (
+                                {formErrors.ds_contrato && (
                                     <p className="mt-1 text-sm text-red-600 flex items-center">
                                         <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
-                                        <span>{formErrors.ds_situacao}</span>
+                                        <span>{formErrors.ds_contrato}</span>
                                     </p>
                                 )}
                             </div>
 
+                            {/* Nomeados */}
+                            <div className="relative">
+                                <label htmlFor="nr_nomeados" className="text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                    Nomeados
+                                    {formData.ds_contrato !== 'Básico' && (
+                                        <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center">
+                                            <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2-0-002-2v-6a2 2-0-00-2-2H6a2 2-0-00-2 2v6a2 2-0-00-2 2zm10-10V7a4 4-0-00-8 0v4h8z" />
+                                            </svg>
+                                            Bloqueado
+                                        </span>
+                                    )}
+                                </label>
+                                <div className="relative">
+                                    {formData.ds_contrato !== 'Básico' && (
+                                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+                                            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2-0-002-2v-6a2 2-0-00-2-2H6a2 2-0-00-2 2v6a2 2-0-00-2 2zm10-10V7a4 4-0-00-8 0v4h8z" />
+                                            </svg>
+                                        </div>
+                                    )}
+                                    <input
+                                        type="number"
+                                        id="nr_nomeados"
+                                        name="nr_nomeados"
+                                        value={formData.nr_nomeados || ''}
+                                        onChange={handleNumberChange}
+                                        disabled={isSubmitting || formData.ds_contrato !== 'Básico'}
+                                        className={getInputClasses('nr_nomeados', formData.ds_contrato !== 'Básico')}
+                                        placeholder={formData.ds_contrato !== 'Básico' ? "Requer contrato" : "Número de nomeados"}
+                                        style={formData.ds_contrato !== 'Básico' ? { paddingLeft: '2.5rem' } : {}}
+                                    />
+                                </div>
+
+                            </div>
+
+                            {/* Simultâneos */}
+                            <div className="relative">
+                                <label htmlFor="nr_simultaneos" className="text-sm font-medium text-gray-700 mb-1 flex items-center">
+                                    Simultâneos
+                                    {formData.ds_contrato !== 'Básico' && (
+                                        <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center">
+                                            <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2-0-002-2v-6a2 2-0-00-2-2H6a2 2-0-00-2 2v6a2 2-0-00-2 2zm10-10V7a4 4-0-00-8 0v4h8z" />
+                                            </svg>
+                                            Bloqueado
+                                        </span>
+                                    )}
+                                </label>
+                                <div className="relative">
+                                    {formData.ds_contrato !== 'Básico' && (
+                                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+                                            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2-0-002-2v-6a2 2-0-00-2-2H6a2 2-0-00-2 2v6a2 2-0-00-2 2zm10-10V7a4 4-0-00-8 0v4h8z" />
+                                            </svg>
+                                        </div>
+                                    )}
+                                    <input
+                                        type="number"
+                                        id="nr_simultaneos"
+                                        name="nr_simultaneos"
+                                        value={formData.nr_simultaneos || ''}
+                                        onChange={handleNumberChange}
+                                        disabled={isSubmitting || formData.ds_contrato !== 'Básico'}
+                                        className={getInputClasses('nr_simultaneos', formData.ds_contrato !== 'Básico')}
+                                        placeholder={formData.ds_contrato !== 'Básico' ? "Requer contrato" : "Número de simultâneos"}
+                                        style={formData.ds_contrato !== 'Básico' ? { paddingLeft: '2.5rem' } : {}}
+                                    />
+                                </div>
+                            </div>
+
                             {/* Sistema */}
-                            <div className="relative md:col-span-1">
+                            <div className="relative">
                                 <label htmlFor="ds_sistema" className="text-sm font-medium text-gray-700 mb-1 block">
                                     Sistema <span className="text-red-500">*</span>
                                 </label>
@@ -932,57 +1079,25 @@ export default function CadastroCliente() {
                                 )}
                             </div>
 
-                            {/* Data do Contrato - Modificado para mês/ano */}
-                            <div className="relative">
-                                <label htmlFor="dt_data_contrato" className="text-sm font-medium text-gray-700 mb-1 block">
-                                    Data do Contrato (Mês/Ano)
-                                </label>
-                                <input
-                                    type="month"
-                                    id="dt_data_contrato"
-                                    name="dt_data_contrato"
-                                    value={formData.dt_data_contrato || ''}
-                                    onChange={handleChange}
-                                    disabled={isSubmitting}
-                                    className={getInputClasses('dt_data_contrato')}
-                                />
-                            </div>
-
-                            {/* Código ZZ */}
-                            <div className="relative">
-                                <label htmlFor="nr_codigo_zz" className="text-sm font-medium text-gray-700 mb-1 block">
-                                    Código ZZ
-                                </label>
-                                <input
-                                    type="text"
-                                    id="nr_codigo_zz"
-                                    name="nr_codigo_zz"
-                                    value={formData.nr_codigo_zz || ''}
-                                    onChange={handleChange}
-                                    disabled={isSubmitting}
-                                    className={getInputClasses('nr_codigo_zz')}
-                                    placeholder="Código ZZ"
-                                />
-                            </div>
-
-                            {/* Contrato - Agora é um select */}
-                            <div className="relative">
-                                <label htmlFor="ds_contrato" className="text-sm font-medium text-gray-700 mb-1 block">
-                                    Contrato <span className="text-red-500">*</span>
+                            {/* Situação */}
+                            <div className="relative md:col-span-2">
+                                <label htmlFor="ds_situacao" className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Situação <span className="text-red-500">*</span>
                                 </label>
                                 <div className="relative">
                                     <select
-                                        id="ds_contrato"
-                                        name="ds_contrato"
-                                        value={formData.ds_contrato || ''}
+                                        id="ds_situacao"
+                                        name="ds_situacao"
+                                        value={formData.ds_situacao}
                                         onChange={handleChange}
                                         disabled={isSubmitting}
-                                        className={getSelectClasses('ds_contrato')}
+                                        className={getSelectClasses('ds_situacao')}
                                     >
                                         <option value="">Selecione</option>
-                                        <option value="Avançado">Avançado</option>
-                                        <option value="Intermediário">Intermediário</option>
-                                        <option value="Básico com Suporte">Básico com Suporte</option>
+                                        <option value="Implantação">Implantação</option>
+                                        <option value="Produção">Produção</option>
+                                        <option value="Restrição">Restrição</option>
+                                        <option value="Inativo">Inativo</option>
                                     </select>
                                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -990,83 +1105,12 @@ export default function CadastroCliente() {
                                         </svg>
                                     </div>
                                 </div>
-                                {formErrors.ds_contrato && (
+                                {formErrors.ds_situacao && (
                                     <p className="mt-1 text-sm text-red-600 flex items-center">
                                         <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
-                                        <span>{formErrors.ds_contrato}</span>
+                                        <span>{formErrors.ds_situacao}</span>
                                     </p>
                                 )}
-                            </div>
-
-                            {/* Nomeados */}
-                            <div className="relative">
-                                <label htmlFor="nr_nomeados" className="text-sm font-medium text-gray-700 mb-1 flex items-center">
-                                    Nomeados
-                                    {formData.ds_contrato !== 'Básico com Suporte' && (
-                                        <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center">
-                                            <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0-002-2v-6a2 2-0-00-2-2H6a2 2-0-00-2 2v6a2 2-0-00-2 2zm10-10V7a4 4-0-00-8 0v4h8z" />
-                                            </svg>
-                                            Bloqueado
-                                        </span>
-                                    )}
-                                </label>
-                                <div className="relative">
-                                    {formData.ds_contrato !== 'Básico com Suporte' && (
-                                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-                                            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2-0-002-2v-6a2 2-0-00-2-2H6a2 2-0-00-2 2v6a2 2-0-00-2 2zm10-10V7a4 4-0-00-8 0v4h8z" />
-                                            </svg>
-                                        </div>
-                                    )}
-                                    <input
-                                        type="number"
-                                        id="nr_nomeados"
-                                        name="nr_nomeados"
-                                        value={formData.nr_nomeados || ''}
-                                        onChange={handleNumberChange}
-                                        disabled={isSubmitting || formData.ds_contrato !== 'Básico com Suporte'}
-                                        className={getInputClasses('nr_nomeados', formData.ds_contrato !== 'Básico com Suporte')}
-                                        placeholder={formData.ds_contrato !== 'Básico com Suporte' ? "Requer contrato" : "Número de nomeados"}
-                                        style={formData.ds_contrato !== 'Básico com Suporte' ? { paddingLeft: '2.5rem' } : {}}
-                                    />
-                                </div>
-
-                            </div>
-
-                            {/* Simultâneos */}
-                            <div className="relative">
-                                <label htmlFor="nr_simultaneos" className="text-sm font-medium text-gray-700 mb-1 flex items-center">
-                                    Simultâneos
-                                    {formData.ds_contrato !== 'Básico com Suporte' && (
-                                        <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex items-center">
-                                            <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2-0-002-2v-6a2 2-0-00-2-2H6a2 2-0-00-2 2v6a2 2-0-00-2 2zm10-10V7a4 4-0-00-8 0v4h8z" />
-                                            </svg>
-                                            Bloqueado
-                                        </span>
-                                    )}
-                                </label>
-                                <div className="relative">
-                                    {formData.ds_contrato !== 'Básico com Suporte' && (
-                                        <div className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
-                                            <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2-0-002-2v-6a2 2-0-00-2-2H6a2 2-0-00-2 2v6a2 2-0-00-2 2zm10-10V7a4 4-0-00-8 0v4h8z" />
-                                            </svg>
-                                        </div>
-                                    )}
-                                    <input
-                                        type="number"
-                                        id="nr_simultaneos"
-                                        name="nr_simultaneos"
-                                        value={formData.nr_simultaneos || ''}
-                                        onChange={handleNumberChange}
-                                        disabled={isSubmitting || formData.ds_contrato !== 'Básico com Suporte'}
-                                        className={getInputClasses('nr_simultaneos', formData.ds_contrato !== 'Básico com Suporte')}
-                                        placeholder={formData.ds_contrato !== 'Básico com Suporte' ? "Requer contrato" : "Número de simultâneos"}
-                                        style={formData.ds_contrato !== 'Básico com Suporte' ? { paddingLeft: '2.5rem' } : {}}
-                                    />
-                                </div>
                             </div>
 
                             {/* Diário de Viagem */}
@@ -1205,83 +1249,6 @@ export default function CadastroCliente() {
                                 />
                             </div>
 
-                            {/* Franquia NF */}
-                            <div className="relative md:col-span-2">
-                                <label htmlFor="nr_franquia_nf" className="text-sm font-medium text-gray-700 mb-1 block">
-                                    Franquia NF
-                                </label>
-                                <input
-                                    type="number"
-                                    id="nr_franquia_nf"
-                                    name="nr_franquia_nf"
-                                    value={formData.nr_franquia_nf || ''}
-                                    onChange={handleNumberChange}
-                                    disabled={isSubmitting}
-                                    className={getInputClasses('nr_franquia_nf')}
-                                    placeholder="Franquia NF"
-                                />
-                            </div>
-
-                            {/* Quantidade de Documentos */}
-                            <div className="relative">
-                                <label htmlFor="nr_qtde_documentos" className="text-sm font-medium text-gray-700 mb-1 block">
-                                    Qtde de Documentos
-                                </label>
-                                <input
-                                    type="number"
-                                    id="nr_qtde_documentos"
-                                    name="nr_qtde_documentos"
-                                    value={formData.nr_qtde_documentos || ''}
-                                    onChange={handleNumberChange}
-                                    disabled={isSubmitting}
-                                    className={getInputClasses('nr_qtde_documentos')}
-                                    placeholder="Qtde de documentos"
-                                />
-                            </div>
-
-                            {/* Valor da Franquia */}
-                            <div className="relative">
-                                <label htmlFor="nr_valor_franqia" className="text-sm font-medium text-gray-700 mb-1 block">
-                                    Valor da Franquia (R$)
-                                </label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                        <span className="text-gray-500">R$</span>
-                                    </div>
-                                    <input
-                                        type="text"
-                                        id="nr_valor_franqia"
-                                        name="nr_valor_franqia"
-                                        value={formData.nr_valor_franqia !== undefined ? formatCurrency(formData.nr_valor_franqia) : ''}
-                                        onChange={handleCurrencyChange}
-                                        disabled={isSubmitting}
-                                        className={`${getInputClasses('nr_valor_franqia')} pl-10`}
-                                        placeholder="0,00"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Valor Excedente */}
-                            <div className="relative">
-                                <label htmlFor="nr_valor_excendente" className="text-sm font-medium text-gray-700 mb-1 block">
-                                    Valor Excedente (R$)
-                                </label>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                                        <span className="text-gray-500">R$</span>
-                                    </div>
-                                    <input
-                                        type="text"
-                                        id="nr_valor_excendente"
-                                        name="nr_valor_excendente"
-                                        value={formData.nr_valor_excendente !== undefined ? formatCurrency(formData.nr_valor_excendente) : ''}
-                                        onChange={handleCurrencyChange}
-                                        disabled={isSubmitting}
-                                        className={`${getInputClasses('nr_valor_excendente')} pl-10`}
-                                        placeholder="0,00"
-                                    />
-                                </div>
-                            </div>
 
                             {/* Observações do Contrato */}
                             <div className="relative md:col-span-5">
@@ -1300,6 +1267,288 @@ export default function CadastroCliente() {
                                 />
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Card de informações Alfasig */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="p-6">
+                        <div className="flex items-center mb-5">
+                            <FileText size={20} className="mr-2 text-blue-500" />
+                            <h2 className="text-lg font-semibold text-gray-800">Informações Alfasig</h2>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-x-6 gap-y-5">
+                            {/* Franquia NF */}
+                            <div className="relative md:col-span-2">
+                                <label htmlFor="ds_franquia_nf" className="text-sm font-medium text-gray-700 mb-1 block">
+                                    Franquia NF <span className="text-red-500">*</span>
+                                </label>
+                                <div className="relative">
+                                    <select
+                                        id="ds_franquia_nf"
+                                        name="ds_franquia_nf"
+                                        value={formData.ds_franquia_nf || ''}
+                                        onChange={handleChange}
+                                        disabled={isSubmitting}
+                                        className={getSelectClasses('ds_franquia_nf')}
+                                    >
+                                        <option value="">Selecione</option>
+                                        <option value="Colet">Colet</option>
+                                        <option value="Alfasig">Alfasig</option>
+                                    </select>
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                        </svg>
+                                    </div>
+                                </div>
+                                {formErrors.ds_franquia_nf && (
+                                    <p className="mt-1 text-sm text-red-600 flex items-center">
+                                        <ShieldAlert size={14} className="mr-1 flex-shrink-0" />
+                                        <span>{formErrors.ds_franquia_nf}</span>
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Only show additional fields if Colet is selected */}
+                        {formData.ds_franquia_nf === 'Colet' && (
+                            <>
+                                {/* Additional Colet fields */}
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-x-6 gap-y-5 mt-6">
+                                    {/* Quantidade de Documentos */}
+                                    <div className="relative">
+                                        <label htmlFor="nr_qtde_documentos" className="text-sm font-medium text-gray-700 mb-1 block">
+                                            Qtde de Documentos
+                                        </label>
+                                        <input
+                                            type="number"
+                                            id="nr_qtde_documentos"
+                                            name="nr_qtde_documentos"
+                                            value={formData.nr_qtde_documentos || ''}
+                                            onChange={handleNumberChange}
+                                            disabled={isSubmitting}
+                                            className={getInputClasses('nr_qtde_documentos')}
+                                            placeholder="Qtde de documentos"
+                                        />
+                                    </div>
+
+                                    {/* Valor da Franquia */}
+                                    <div className="relative">
+                                        <label htmlFor="nr_valor_franqia" className="text-sm font-medium text-gray-700 mb-1 block">
+                                            Valor da Franquia (R$)
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                                <span className="text-gray-500">R$</span>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                id="nr_valor_franqia"
+                                                name="nr_valor_franqia"
+                                                value={formData.nr_valor_franqia !== undefined ? formatCurrency(formData.nr_valor_franqia) : ''}
+                                                onChange={handleCurrencyChange}
+                                                disabled={isSubmitting}
+                                                className={`${getInputClasses('nr_valor_franqia')} pl-10`}
+                                                placeholder="0,00"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Valor Excedente */}
+                                    <div className="relative">
+                                        <label htmlFor="nr_valor_excendente" className="text-sm font-medium text-gray-700 mb-1 block">
+                                            Valor Excedente (R$)
+                                        </label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                                <span className="text-gray-500">R$</span>
+                                            </div>
+                                            <input
+                                                type="text"
+                                                id="nr_valor_excendente"
+                                                name="nr_valor_excendente"
+                                                value={formData.nr_valor_excendente !== undefined ? formatCurrency(formData.nr_valor_excendente) : ''}
+                                                onChange={handleCurrencyChange}
+                                                disabled={isSubmitting}
+                                                className={`${getInputClasses('nr_valor_excendente')} pl-10`}
+                                                placeholder="0,00"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Tipos de Notas Fiscais */}
+                                    <div className="relative md:col-span-4 p-4 rounded-lg border bg-gray-50 border-gray-100">
+                                        <div className="flex items-center mb-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
+                                            </svg>
+                                            <h3 className="font-medium text-gray-700">
+                                                Tipos de Documentos Fiscais
+                                            </h3>
+                                        </div>
+                                        <div className="flex flex-wrap gap-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                                            {/* NFE Checkbox */}
+                                            <div className="flex items-center">
+                                                <div className="relative inline-flex items-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        id="fl_nfe"
+                                                        name="fl_nfe"
+                                                        checked={formData.fl_nfe || false}
+                                                        onChange={handleCheckboxChange}
+                                                        disabled={isSubmitting}
+                                                        className="opacity-0 absolute h-6 w-6"
+                                                    />
+                                                    <div className={`border-2 rounded-md w-6 h-6 flex flex-shrink-0 justify-center items-center mr-2 ${formData.fl_nfe ? 'bg-blue-500 border-blue-500' : 'border-gray-300 bg-white'}`}>
+                                                        {formData.fl_nfe && (
+                                                            <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                            </svg>
+                                                        )}
+                                                    </div>
+                                                    <label htmlFor="fl_nfe" className="select-none text-gray-700 font-medium">
+                                                        NF-e
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            {/* NFSE Checkbox */}
+                                            <div className="flex items-center">
+                                                <div className="relative inline-flex items-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        id="fl_nfse"
+                                                        name="fl_nfse"
+                                                        checked={formData.fl_nfse || false}
+                                                        onChange={handleCheckboxChange}
+                                                        disabled={isSubmitting}
+                                                        className="opacity-0 absolute h-6 w-6"
+                                                    />
+                                                    <div className={`border-2 rounded-md w-6 h-6 flex flex-shrink-0 justify-center items-center mr-2 ${formData.fl_nfse ? 'bg-blue-500 border-blue-500' : 'border-gray-300 bg-white'}`}>
+                                                        {formData.fl_nfse && (
+                                                            <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                            </svg>
+                                                        )}
+                                                    </div>
+                                                    <label htmlFor="fl_nfse" className="select-none text-gray-700 font-medium">
+                                                        NFS-e
+                                                    </label>
+                                                </div>
+                                            </div>
+
+                                            {/* NFCE Checkbox */}
+                                            <div className="flex items-center">
+                                                <div className="relative inline-flex items-center">
+                                                    <input
+                                                        type="checkbox"
+                                                        id="fl_nfce"
+                                                        name="fl_nfce"
+                                                        checked={formData.fl_nfce || false}
+                                                        onChange={handleCheckboxChange}
+                                                        disabled={isSubmitting}
+                                                        className="opacity-0 absolute h-6 w-6"
+                                                    />
+                                                    <div className={`border-2 rounded-md w-6 h-6 flex flex-shrink-0 justify-center items-center mr-2 ${formData.fl_nfce ? 'bg-blue-500 border-blue-500' : 'border-gray-300 bg-white'}`}>
+                                                        {formData.fl_nfce && (
+                                                            <svg className="w-3.5 h-3.5 text-white" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                            </svg>
+                                                        )}
+                                                    </div>
+                                                    <label htmlFor="fl_nfce" className="select-none text-gray-700 font-medium">
+                                                        NFC-e
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* PDV Section - Only show when NFC-e is checked */}
+                                    <div className={`relative md:col-span-4 p-4 rounded-lg border ${formData.fl_nfce ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-100'}`}>
+                                        <div className="flex items-center mb-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 mr-2 ${formData.fl_nfce ? 'text-blue-500' : 'text-gray-400'}`} viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clipRule="evenodd" />
+                                            </svg>
+                                            <h3 className={`font-medium ${formData.fl_nfce ? 'text-blue-700' : 'text-gray-500'}`}>
+                                                Configurações PDV
+                                                {!formData.fl_nfce && (
+                                                    <span className="text-xs ml-2">(Requer NFC-e ativado)</span>
+                                                )}
+                                            </h3>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {/* Quantidade de PDV */}
+                                            <div className="relative">
+                                                <label htmlFor="nr_qtde_pdv" className={`text-sm font-medium mb-1 block ${formData.fl_nfce ? 'text-gray-700' : 'text-gray-400'}`}>
+                                                    Quantidade de PDV
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    id="nr_qtde_pdv"
+                                                    name="nr_qtde_pdv"
+                                                    value={formData.nr_qtde_pdv || ''}
+                                                    onChange={handleNumberChange}
+                                                    disabled={isSubmitting || !formData.fl_nfce}
+                                                    className={getInputClasses('nr_qtde_pdv', !formData.fl_nfce)}
+                                                    placeholder={formData.fl_nfce ? "Quantidade de PDV" : "NFC-e necessário"}
+                                                />
+                                            </div>
+
+                                            {/* Valor do PDV */}
+                                            <div className="relative">
+                                                <label htmlFor="nr_valor_pdv" className={`text-sm font-medium mb-1 block ${formData.fl_nfce ? 'text-gray-700' : 'text-gray-400'}`}>
+                                                    Valor do PDV (R$)
+                                                </label>
+                                                <div className="relative">
+                                                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                                        <span className={`${formData.fl_nfce ? 'text-gray-500' : 'text-gray-300'}`}>R$</span>
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        id="nr_valor_pdv"
+                                                        name="nr_valor_pdv"
+                                                        value={formData.nr_valor_pdv !== undefined ? formatCurrency(formData.nr_valor_pdv) : ''}
+                                                        onChange={handleCurrencyChange}
+                                                        disabled={isSubmitting || !formData.fl_nfce}
+                                                        className={`${getInputClasses('nr_valor_pdv', !formData.fl_nfce)} pl-10`}
+                                                        placeholder={formData.fl_nfce ? "0,00" : "NFC-e necessário"}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Valor Total PDV (calculado) */}
+                                            <div className="relative">
+                                                <label htmlFor="valor_total_pdv" className={`text-sm font-medium mb-1 block ${formData.fl_nfce ? 'text-gray-700' : 'text-gray-400'}`}>
+                                                    Valor Total PDV (R$)
+                                                </label>
+                                                <div className="relative">
+                                                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                                                        <span className={`${formData.fl_nfce ? 'text-gray-500' : 'text-gray-300'}`}>R$</span>
+                                                    </div>
+                                                    <input
+                                                        type="text"
+                                                        id="valor_total_pdv"
+                                                        name="valor_total_pdv"
+                                                        value={
+                                                            formData.nr_qtde_pdv && formData.nr_valor_pdv && formData.fl_nfce
+                                                                ? formatCurrency(formData.nr_qtde_pdv * formData.nr_valor_pdv)
+                                                                : '0,00'
+                                                        }
+                                                        disabled={true}
+                                                        className={`${getInputClasses('valor_total_pdv', true)} pl-10 ${formData.fl_nfce && formData.nr_qtde_pdv && formData.nr_valor_pdv ? 'bg-blue-50 border-blue-200 font-semibold text-blue-800' : ''}`}
+                                                        readOnly
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
 
