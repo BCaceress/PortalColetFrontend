@@ -3,7 +3,7 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion } from 'framer-motion';
 import { Loader2, Mail } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // Define the RAT type for this component (or import from a types file)
 interface RAT {
@@ -46,6 +46,23 @@ interface EmailRATProps {
 export const EmailRAT = ({ rat, variant = 'icon', size = 'md' }: EmailRATProps) => {
     // Estado para controlar loading durante a busca do email
     const [isLoading, setIsLoading] = useState(false);
+    // Estado para mostrar o dropdown de opções de email
+    const [showOptions, setShowOptions] = useState(false);
+    // Ref para o dropdown
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Fechar dropdown quando clicar fora dele
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setShowOptions(false);
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     // Format date helper function
     const formatDate = (dateString: string) => {
@@ -122,9 +139,9 @@ Equipe de Suporte Técnico
     };
 
     // Handle email sending
-    const handleSendEmail = async (e: React.MouseEvent) => {
+    const handleSendEmail = async (e: React.MouseEvent, useGmail: boolean = false) => {
         e.stopPropagation();
-
+        setShowOptions(false);
         setIsLoading(true);
 
         try {
@@ -151,27 +168,35 @@ Equipe de Suporte Técnico
 
             const { subject, body } = generateEmailContent(rat);
 
-            // Criar o mailto URL com cc para os emails adicionais
-            const mailtoLink = `mailto:${toEmail}${ccEmails ? `?cc=${encodeURIComponent(ccEmails)}` : ''}${ccEmails ? '&' : '?'}subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            if (useGmail) {
+                // Gmail URL format
+                const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(toEmail)}${ccEmails ? `&cc=${encodeURIComponent(ccEmails)}` : ''}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
-            try {
-                // Abrir no cliente de email padrão
-                window.location.href = mailtoLink;
-            } catch (mailtoError) {
-                console.error('Erro ao abrir cliente de email:', mailtoError);
+                // Abrir o Gmail em uma nova aba
+                window.open(gmailUrl, '_blank');
+            } else {
+                // Criar o mailto URL com cc para os emails adicionais
+                const mailtoLink = `mailto:${toEmail}${ccEmails ? `?cc=${encodeURIComponent(ccEmails)}` : ''}${ccEmails ? '&' : '?'}subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
-                // Oferecer alternativa de copiar o email para a área de transferência
-                const confirmCopy = window.confirm(
-                    'Não foi possível abrir seu cliente de email. Deseja copiar o endereço de email do contato para a área de transferência?'
-                );
+                try {
+                    // Abrir no cliente de email padrão
+                    window.location.href = mailtoLink;
+                } catch (mailtoError) {
+                    console.error('Erro ao abrir cliente de email:', mailtoError);
 
-                if (confirmCopy) {
-                    try {
-                        await navigator.clipboard.writeText(toEmail);
-                        alert(`Email copiado: ${toEmail}`);
-                    } catch (clipboardError) {
-                        console.error('Erro ao copiar para área de transferência:', clipboardError);
-                        alert(`O email do contato é: ${toEmail}`);
+                    // Oferecer alternativa de copiar o email para a área de transferência
+                    const confirmCopy = window.confirm(
+                        'Não foi possível abrir seu cliente de email. Deseja copiar o endereço de email do contato para a área de transferência?'
+                    );
+
+                    if (confirmCopy) {
+                        try {
+                            await navigator.clipboard.writeText(toEmail);
+                            alert(`Email copiado: ${toEmail}`);
+                        } catch (clipboardError) {
+                            console.error('Erro ao copiar para área de transferência:', clipboardError);
+                            alert(`O email do contato é: ${toEmail}`);
+                        }
                     }
                 }
             }
@@ -183,41 +208,78 @@ Equipe de Suporte Técnico
         }
     };
 
+    // Toggle dropdown
+    const toggleOptions = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setShowOptions(!showOptions);
+    };
+
+    // Email options dropdown
+    const EmailOptions = () => (
+        <div
+            ref={dropdownRef}
+            className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 py-1 border border-gray-200"
+        >
+            <button
+                onClick={(e) => handleSendEmail(e, false)}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            >
+                <Mail size={14} />
+                <span>Email Padrão</span>
+            </button>
+            <button
+                onClick={(e) => handleSendEmail(e, true)}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2"
+            >
+                <svg width="14" height="14" viewBox="0 0 24 24" className="text-red-500">
+                    <path fill="currentColor" d="M20 18h-2V9.25L12 13L6 9.25V18H4V6h1.2l6.8 4.25L18.8 6H20m0-2H4c-1.11 0-2 .89-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" />
+                </svg>
+                <span>Gmail</span>
+            </button>
+        </div>
+    );
+
     // Render icon variant
     if (variant === 'icon') {
         return (
-            <motion.button
-                onClick={handleSendEmail}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.97 }}
-                className="p-1 text-blue-600 rounded hover:bg-blue-50 transition-colors"
-                title="Enviar por e-mail"
-                disabled={isLoading}
-            >
-                {isLoading ? (
-                    <Loader2 size={size === 'sm' ? 14 : 18} className="animate-spin" />
-                ) : (
-                    <Mail size={size === 'sm' ? 14 : 18} />
-                )}
-            </motion.button>
+            <div className="relative">
+                <motion.button
+                    onClick={toggleOptions}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="p-1 text-blue-600 rounded hover:bg-blue-50 transition-colors"
+                    title="Opções de email"
+                    disabled={isLoading}
+                >
+                    {isLoading ? (
+                        <Loader2 size={size === 'sm' ? 14 : 18} className="animate-spin" />
+                    ) : (
+                        <Mail size={size === 'sm' ? 14 : 18} />
+                    )}
+                </motion.button>
+                {showOptions && <EmailOptions />}
+            </div>
         );
     }
 
     // Render button variant
     return (
-        <motion.button
-            onClick={handleSendEmail}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 flex items-center gap-1"
-            disabled={isLoading}
-        >
-            {isLoading ? (
-                <Loader2 size={size === 'sm' ? 12 : 14} className="animate-spin" />
-            ) : (
-                <Mail size={size === 'sm' ? 12 : 14} />
-            )}
-            E-mail
-        </motion.button>
+        <div className="relative">
+            <motion.button
+                onClick={toggleOptions}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 flex items-center gap-1"
+                disabled={isLoading}
+            >
+                {isLoading ? (
+                    <Loader2 size={size === 'sm' ? 12 : 14} className="animate-spin" />
+                ) : (
+                    <Mail size={size === 'sm' ? 12 : 14} />
+                )}
+                E-mail
+            </motion.button>
+            {showOptions && <EmailOptions />}
+        </div>
     );
 };

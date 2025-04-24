@@ -5,6 +5,7 @@ import {
     Building2,
     Calendar,
     ClipboardList,
+    Code,
     FileText,
     Headset,
     LayoutDashboard,
@@ -67,6 +68,11 @@ export default function Sidebar({ collapsed, mobileOpen }: SidebarProps) {
             name: 'Tickets',
             href: '/dashboard/chamados',
             icon: <Headset size={20} className="stroke-current" />
+        },
+        {
+            name: 'Desenvolvimentos',
+            href: '/dashboard/desenvolvimentos',
+            icon: <Code size={20} className="stroke-current" />
         },
     ];
 
