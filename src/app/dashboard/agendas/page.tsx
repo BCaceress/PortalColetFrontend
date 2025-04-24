@@ -1,384 +1,173 @@
-'use client';
+"use client";
 
-import { GoogleCalendarSync } from '@/components/GoogleCalendarSync';
-import { useGoogleAuth } from '@/contexts/GoogleAuthContext';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { motion } from 'framer-motion';
-import moment from 'moment';
-import 'moment/locale/pt-br';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { Calendar, momentLocalizer } from 'react-big-calendar';
-import 'react-big-calendar/lib/css/react-big-calendar.css';
-import styles from './agendas.module.css';
+import { PageHeader } from "@/components/ui/PageHeader";
+import { motion } from "framer-motion";
+import { useState } from "react";
 
-// Setup the localizer for react-big-calendar
-moment.locale('pt-br');
-const localizer = momentLocalizer(moment);
-
-// Define the Agenda type
-interface Agenda {
-    id_agenda: number;
-    ds_titulo: string;
-    ds_descricao?: string;
-    ds_tipo: 'agenda' | 'rat' | 'ticket';
-    ds_status: 'agendado' | 'em_andamento' | 'concluido' | 'cancelado';
-    ds_prioridade: 'baixa' | 'media' | 'alta' | 'urgente';
-    dt_agendamento: string;
-    dt_inicio?: string;
-    dt_fim?: string;
-    tm_duracao?: string;
-    id_cliente: number;
-    id_contato?: number;
-    id_usuario: number;
-    id_rat?: number;
-    id_chamado?: number;
-    cliente?: {
-        id_cliente: number;
-        ds_nome: string;
-    };
-    contato?: {
-        id_contato: number;
-        ds_nome: string;
-    };
-    usuario?: {
-        id_usuario: number;
-        nome: string;
-    };
-}
-
-// Calendar event interface for react-big-calendar
-interface CalendarEvent {
-    id: number;
-    title: string;
-    start: Date;
-    end: Date;
-    allDay?: boolean;
-    resource?: Agenda;
-}
-
-// Modal mode type
-type ModalMode = 'create' | 'edit' | 'view';
-type ConvertType = 'rat' | 'ticket' | null;
-type ViewMode = 'table' | 'calendar';
-
-// Calendar event style customization
-const eventStyleGetter = (event: CalendarEvent) => {
-    const agenda = event.resource as Agenda;
-    if (!agenda) return {};
-
-    let className = '';
-
-    switch (agenda.ds_tipo) {
-        case 'agenda':
-            className = styles.calendarEventAgenda;
-            break;
-        case 'rat':
-            className = styles.calendarEventRat;
-            break;
-        case 'ticket':
-            className = styles.calendarEventTicket;
-            break;
+// List of available calendars (can be expanded later)
+const calendars = [
+    {
+        id: "brunocaceres8",
+        name: "Bruno Caceres",
+        url: "https://calendar.google.com/calendar/embed?src=brunocaceres8%40gmail.com&ctz=America%2FSao_Paulo&mode=WEEK",
+        color: "#4285F4", // Google blue
+        role: "Desenvolvedor",
+        description: "Calendário de planejamento e coordenação de desenvolvimento"
+    },
+    {
+        id: "dannbrazil",
+        name: "Dann Brazil",
+        url: "https://calendar.google.com/calendar/embed?src=dannbrazil%40gmail.com&ctz=America%2FSao_Paulo&mode=WEEK",
+        color: "#0F9D58", // Google green
+        role: "Analista",
+        description: "Calendário de desenvolvimento e implementação de features"
+    },
+    {
+        id: "regioduarte",
+        name: "Regio Duarte",
+        url: "https://calendar.google.com/calendar/embed?src=regio.duarte%40gmail.com&ctz=America%2FSao_Paulo&mode=WEEK",
+        color: "#DB4437", // Google red
+        role: "Gerente de Projetos",
+        description: "Calendário de gerenciamento e coordenação de projetos"
     }
+];
 
-    if (agenda.ds_status === 'cancelado') {
-        className += ' opacity-60';
-    }
+export default function DesenvolvimentosPage() {
+    const [selectedCalendarId, setSelectedCalendarId] = useState(calendars[0].id);
 
-    if (agenda.ds_prioridade === 'alta' || agenda.ds_prioridade === 'urgente') {
-        className += ' border-l-4';
-    }
+    const selectedCalendar = calendars.find(calendar => calendar.id === selectedCalendarId) || calendars[0];
 
-    return {
-        className: `${className} shadow-sm hover:shadow-md transition-shadow duration-150`,
-        style: {
-            fontSize: '0.85rem',
-            fontWeight: agenda.ds_prioridade === 'urgente' ? 600 : 500,
-            padding: '2px 8px'
-        }
+    const handleCreateTask = () => {
+        // URL para criação de um novo evento no Google Calendar do usuário selecionado
+        const calendarEmail = selectedCalendar.url.split('src=')[1].split('&')[0];
+        const decodedEmail = decodeURIComponent(calendarEmail);
+
+        // Formato da URL para criar evento no Google Calendar
+        const createEventUrl = `https://calendar.google.com/calendar/r/eventedit?text=Nova+Tarefa&details=Detalhes+da+tarefa&add=${decodedEmail}`;
+
+        // Abre em uma nova aba
+        window.open(createEventUrl, '_blank');
     };
-};
-
-export default function Agendas() {
-    const router = useRouter();
-    const { isAuthenticated, isLoading: googleAuthLoading } = useGoogleAuth();
-    const [agendas, setAgendas] = useState<Agenda[]>([]);
-    const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-    const [isSynchronized, setIsSynchronized] = useState(false);
-    const [viewMode, setViewMode] = useState<ViewMode>('calendar'); // Default to calendar view
-    const [currentDate, setCurrentDate] = useState(new Date());
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [modalMode, setModalMode] = useState<ModalMode>('create');
-    const [currentAgenda, setCurrentAgenda] = useState<Agenda | null>(null);
-    const [clientes, setClientes] = useState<any[]>([]);
-    const [usuarios, setUsuarios] = useState<any[]>([]);
-    const [isConvertModalOpen, setIsConvertModalOpen] = useState(false);
-    const [convertType, setConvertType] = useState<ConvertType>(null);
-
-    useEffect(() => {
-        const fetchAgendas = async () => {
-            try {
-                setLoading(true);
-                const today = new Date();
-                const tomorrow = new Date(today);
-                tomorrow.setDate(tomorrow.getDate() + 1);
-
-                const mockAgendas: Agenda[] = [
-                    {
-                        id_agenda: 1,
-                        ds_titulo: 'Implantação do sistema - Cliente A',
-                        ds_descricao: 'Implantação do módulo financeiro',
-                        ds_tipo: 'agenda',
-                        ds_status: 'agendado',
-                        ds_prioridade: 'alta',
-                        dt_agendamento: tomorrow.toISOString(),
-                        id_cliente: 101,
-                        id_usuario: 201,
-                        cliente: {
-                            id_cliente: 101,
-                            ds_nome: 'Empresa ABC Ltda'
-                        },
-                        usuario: {
-                            id_usuario: 201,
-                            nome: 'João Silva'
-                        },
-                        contato: {
-                            id_contato: 301,
-                            ds_nome: 'Maria Financeiro'
-                        },
-                    }
-                ];
-
-                setAgendas(mockAgendas);
-                setError(null);
-            } catch (err) {
-                console.error('Erro ao buscar agendas:', err);
-                setError('Não foi possível carregar as agendas. Tente novamente mais tarde.');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchAgendas();
-    }, []);
-
-    // Convert agendas to calendar events
-    useEffect(() => {
-        if (agendas.length > 0) {
-            const events = agendas.map(agenda => {
-                const start = agenda.dt_inicio
-                    ? new Date(agenda.dt_inicio)
-                    : new Date(agenda.dt_agendamento);
-
-                let end;
-                if (agenda.dt_fim) {
-                    end = new Date(agenda.dt_fim);
-                } else {
-                    // If no end date, set to 1 hour after start
-                    end = new Date(start);
-                    end.setHours(end.getHours() + 1);
-                }
-
-                return {
-                    id: agenda.id_agenda,
-                    title: agenda.ds_titulo,
-                    start,
-                    end,
-                    allDay: false,
-                    resource: agenda
-                };
-            });
-
-            setCalendarEvents(events);
-        }
-    }, [agendas]);
 
     return (
-        <div className="p-1 sm:p-6 max-w-7xl mx-auto">
-            <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4, delay: 0.1 }}
-                className="mb-6"
-            >
-                <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-                    <div className="p-4 border-b border-gray-100 flex items-center justify-between">
-                        <h2 className="text-lg font-medium text-gray-900 flex items-center">
-                            <img
-                                src="https://www.gstatic.com/images/branding/product/1x/calendar_48dp.png"
-                                alt="Google Calendar"
-                                className="w-5 h-5 mr-2"
-                            />
-                            Sincronização com Google Agenda
-                        </h2>
-                    </div>
-                    <div className="p-4">
-                        <GoogleCalendarSync
-                            agendas={agendas}
-                            onSyncComplete={(updatedAgendas) => {
-                                setAgendas(updatedAgendas);
-                                setIsSynchronized(true);
-                            }}
-                        />
-                    </div>
+        <div className="flex flex-col h-full bg-gray-50 px-2 py-2 sm:px-3">
+            {/* Cabeçalho mais compacto e com visual melhorado */}
+            <div className="mb-3">
+                <PageHeader
+                    title="Desenvolvimentos"
+                    description="Visualize e gerencie agendas de desenvolvimento"
+                />
+            </div>
+
+            <div className="flex flex-col mb-3">
+                <h3 className="text-base font-medium text-gray-700 mb-2 ml-1">Calendários disponíveis</h3>
+
+                {/* Cards sempre em grid, mais compactos e em tela cheia */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                    {calendars.map((calendar) => (
+                        <motion.div
+                            key={calendar.id}
+                            whileHover={{ y: -2 }}
+                            whileTap={{ scale: 0.98 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.2 }}
+                        >
+                            <button
+                                className={`w-full h-full text-left p-3 rounded-lg transition-all duration-150 ${selectedCalendarId === calendar.id
+                                    ? "bg-white ring-2 ring-blue-400 shadow-sm"
+                                    : "bg-white hover:bg-blue-50 border border-gray-100"
+                                    }`}
+                                onClick={() => setSelectedCalendarId(calendar.id)}
+                            >
+                                <div className="flex flex-col items-center text-center">
+                                    <div
+                                        className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm mb-2"
+                                        style={{ backgroundColor: calendar.color }}
+                                    >
+                                        {calendar.name.substring(0, 1)}
+                                    </div>
+                                    <div className="w-full">
+                                        <div className="font-medium text-gray-900 text-sm truncate">{calendar.name}</div>
+                                        <div className="text-xs text-gray-500 truncate">{calendar.role}</div>
+                                    </div>
+                                </div>
+                                {selectedCalendarId === calendar.id && (
+                                    <div className="mt-2 text-xs text-blue-600 font-medium text-center">
+                                        • Selecionado
+                                    </div>
+                                )}
+                            </button>
+                        </motion.div>
+                    ))}
                 </div>
-            </motion.div>
+            </div>
 
-            {/* Only show calendar/table views after synchronization */}
-            {isSynchronized && (
-                <>
-                    {/* View toggle buttons */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.4, delay: 0.2 }}
-                        className="mb-4"
-                    >
-                        <div className="flex justify-center bg-white rounded-lg shadow-sm border border-gray-100 p-1 w-fit mx-auto">
-                            <button
-                                onClick={() => setViewMode('calendar')}
-                                className={`px-4 py-2 rounded-md flex items-center gap-2 ${viewMode === 'calendar'
-                                        ? 'bg-teal-50 text-teal-700 font-medium'
-                                        : 'text-gray-600 hover:bg-gray-50'
-                                    }`}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-calendar">
-                                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-                                    <line x1="16" y1="2" x2="16" y2="6" />
-                                    <line x1="8" y1="2" x2="8" y2="6" />
-                                    <line x1="3" y1="10" x2="21" y2="10" />
-                                </svg>
-                                Calendário
-                            </button>
-                            <button
-                                onClick={() => setViewMode('table')}
-                                className={`px-4 py-2 rounded-md flex items-center gap-2 ${viewMode === 'table'
-                                        ? 'bg-teal-50 text-teal-700 font-medium'
-                                        : 'text-gray-600 hover:bg-gray-50'
-                                    }`}
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-table">
-                                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
-                                    <line x1="3" y1="9" x2="21" y2="9" />
-                                    <line x1="3" y1="15" x2="21" y2="15" />
-                                    <line x1="9" y1="3" x2="9" y2="21" />
-                                    <line x1="15" y1="3" x2="15" y2="21" />
-                                </svg>
-                                Tabela
-                            </button>
+            {/* Container do calendário com padding reduzido */}
+            <div className="flex-grow bg-white rounded-md shadow-sm overflow-hidden border border-gray-200">
+                {/* Cabeçalho do calendário mais simples e elegante */}
+                <div className="border-b border-gray-200 bg-white py-2 px-3 flex justify-between items-center">
+                    <div className="flex items-center">
+                        <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-white shadow-sm mr-2"
+                            style={{ backgroundColor: selectedCalendar.color }}
+                        >
+                            {selectedCalendar.name.substring(0, 1)}
                         </div>
-                    </motion.div>
-
-                    {/* View container */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 0.4, delay: 0.3 }}
-                        className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden"
+                        <h4 className="font-medium text-sm text-gray-900">{selectedCalendar.name}</h4>
+                    </div>
+                    <a
+                        href={selectedCalendar.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center"
                     >
-                        {viewMode === 'calendar' && (
-                            <div className="calendar-container h-[600px] p-2">
-                                <Calendar
-                                    localizer={localizer}
-                                    events={calendarEvents}
-                                    startAccessor="start"
-                                    endAccessor="end"
-                                    style={{ height: '100%' }}
-                                    eventPropGetter={eventStyleGetter}
-                                    formats={{
-                                        monthHeaderFormat: (date) => format(date, 'MMMM yyyy', { locale: ptBR }),
-                                        dayHeaderFormat: (date) => format(date, 'EEEE, dd', { locale: ptBR }),
-                                        dayRangeHeaderFormat: ({ start, end }) =>
-                                            `${format(start, 'dd', { locale: ptBR })} - ${format(end, 'dd MMM', {
-                                                locale: ptBR,
-                                            })}`,
-                                    }}
-                                    messages={{
-                                        today: 'Hoje',
-                                        previous: 'Anterior',
-                                        next: 'Próximo',
-                                        month: 'Mês',
-                                        week: 'Semana',
-                                        day: 'Dia',
-                                        agenda: 'Agenda',
-                                        date: 'Data',
-                                        time: 'Hora',
-                                        event: 'Evento',
-                                        noEventsInRange: 'Não há eventos neste período.',
-                                        showMore: (total) => `+ ${total} mais`,
-                                    }}
-                                />
-                            </div>
-                        )}
+                        <span>Ver no Google</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                    </a>
+                </div>
 
-                        {viewMode === 'table' && (
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="bg-gray-50">
-                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Título</th>
-                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Data</th>
-                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
-                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {agendas.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={5} className="py-4 px-6 text-center text-gray-500">
-                                                    Não há agendamentos disponíveis.
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            agendas.map((agenda) => (
-                                                <tr key={agenda.id_agenda} className="hover:bg-gray-50 border-t border-gray-100">
-                                                    <td className="py-3 px-4 text-sm">
-                                                        <div className="font-medium text-gray-900">{agenda.ds_titulo}</div>
-                                                    </td>
-                                                    <td className="py-3 px-4 text-sm text-gray-600">
-                                                        {format(new Date(agenda.dt_agendamento), 'dd/MM/yyyy HH:mm')}
-                                                    </td>
-                                                    <td className="py-3 px-4 text-sm text-gray-600">
-                                                        {agenda.cliente?.ds_nome || '-'}
-                                                    </td>
-                                                    <td className="py-3 px-4">
-                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                                                            ${agenda.ds_status === 'agendado' ? 'bg-blue-100 text-blue-800' : ''}
-                                                            ${agenda.ds_status === 'em_andamento' ? 'bg-yellow-100 text-yellow-800' : ''}
-                                                            ${agenda.ds_status === 'concluido' ? 'bg-green-100 text-green-800' : ''}
-                                                            ${agenda.ds_status === 'cancelado' ? 'bg-red-100 text-red-800' : ''}
-                                                        `}>
-                                                            {agenda.ds_status === 'agendado' && 'Agendado'}
-                                                            {agenda.ds_status === 'em_andamento' && 'Em andamento'}
-                                                            {agenda.ds_status === 'concluido' && 'Concluído'}
-                                                            {agenda.ds_status === 'cancelado' && 'Cancelado'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3 px-4 text-sm">
-                                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
-                                                            ${agenda.ds_tipo === 'agenda' ? 'bg-purple-100 text-purple-800' : ''}
-                                                            ${agenda.ds_tipo === 'rat' ? 'bg-indigo-100 text-indigo-800' : ''}
-                                                            ${agenda.ds_tipo === 'ticket' ? 'bg-cyan-100 text-cyan-800' : ''}
-                                                        `}>
-                                                            {agenda.ds_tipo === 'agenda' && 'Agenda'}
-                                                            {agenda.ds_tipo === 'rat' && 'RAT'}
-                                                            {agenda.ds_tipo === 'ticket' && 'Ticket'}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </motion.div>
-                </>
-            )}
+                {/* Iframe mais alto para ocupar toda a tela disponível */}
+                <motion.div
+                    key={selectedCalendarId}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="w-full h-[calc(100vh-200px)]"
+                >
+                    <iframe
+                        src={selectedCalendar.url}
+                        style={{ border: 0 }}
+                        width="100%"
+                        height="100%"
+                        frameBorder="0"
+                        scrolling="no"
+                        title={`Agenda de ${selectedCalendar.name}`}
+                        className="bg-white"
+                    ></iframe>
+                </motion.div>
+            </div>
+
+            {/* Botão de criação de tarefas estilo Google Agenda */}
+            <div className="group relative">
+                <motion.button
+                    className="fixed bottom-4 right-4 w-12 h-12 rounded-full bg-blue-600 text-white shadow-lg flex items-center justify-center hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 z-10"
+                    onClick={handleCreateTask}
+                    whileHover={{ scale: 1.05, boxShadow: "0 10px 25px -5px rgba(59, 130, 246, 0.5)" }}
+                    whileTap={{ scale: 0.95 }}
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                </motion.button>
+
+                {/* Tooltip explicativo */}
+                <div className="fixed bottom-[68px] right-4 bg-gray-900 text-white text-xs rounded-md py-1 px-2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-md whitespace-nowrap">
+                    Criar tarefa
+                </div>
+            </div>
         </div>
     );
 }
