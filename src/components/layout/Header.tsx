@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/hooks/useAuth';
 import { User } from '@/types/auth';
-import { Bell, ChevronDown, ChevronLeft, ChevronRight, Expand, LogOut, Menu, Minimize, Settings, User as UserIcon, X } from 'lucide-react';
+import { Bell, Building2, Calendar, ChevronDown, ChevronLeft, ChevronRight, Expand, LogOut, Menu, Minimize, Settings, User as UserIcon, UserPlus, Users, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
@@ -28,21 +28,33 @@ export default function Header({
 }: HeaderProps) {
     const { signOut } = useAuth();
     const [showProfileMenu, setShowProfileMenu] = useState(false);
+    const [showSettingsMenu, setShowSettingsMenu] = useState(false);
     // Use props if provided, otherwise use internal state
     const [localIsFullscreen, setLocalIsFullscreen] = useState(false);
     const isFullscreen = propIsFullscreen !== undefined ? propIsFullscreen : localIsFullscreen;
     const setIsFullscreen = propSetIsFullscreen || setLocalIsFullscreen;
     const profileMenuRef = useRef<HTMLDivElement>(null);
     const profileButtonRef = useRef<HTMLButtonElement>(null);
+    const settingsMenuRef = useRef<HTMLDivElement>(null);
+    const settingsButtonRef = useRef<HTMLButtonElement>(null);
 
     // Função para alternar o menu de perfil
-    const toggleProfileMenu = () => setShowProfileMenu(!showProfileMenu);
+    const toggleProfileMenu = () => {
+        setShowProfileMenu(!showProfileMenu);
+        setShowSettingsMenu(false);
+    };
+
+    // Função para alternar o menu de configurações
+    const toggleSettingsMenu = () => {
+        setShowSettingsMenu(!showSettingsMenu);
+        setShowProfileMenu(false);
+    };
 
     // Função para alternar o sidebar
     const toggleSidebar = () => setCollapsed(!collapsed);
     const toggleMobile = () => setMobileOpen(!mobileOpen);
 
-    // Fechar o menu ao clicar fora dele
+    // Fechar os menus ao clicar fora deles
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (profileMenuRef.current &&
@@ -50,6 +62,13 @@ export default function Header({
                 !profileMenuRef.current.contains(event.target as Node) &&
                 !profileButtonRef.current.contains(event.target as Node)) {
                 setShowProfileMenu(false);
+            }
+
+            if (settingsMenuRef.current &&
+                settingsButtonRef.current &&
+                !settingsMenuRef.current.contains(event.target as Node) &&
+                !settingsButtonRef.current.contains(event.target as Node)) {
+                setShowSettingsMenu(false);
             }
         }
 
@@ -144,10 +163,47 @@ export default function Header({
                             )}
                         </button>
                         {/* Configurações com efeito hover */}
-                        <button className="p-2 rounded-full hover:bg-[#4a4a4a] text-gray-200 transition-all duration-200 
+                        <button
+                            ref={settingsButtonRef}
+                            onClick={toggleSettingsMenu}
+                            className="p-2 rounded-full hover:bg-[#4a4a4a] text-gray-200 transition-all duration-200 
                                         hover:text-[#09A08D]">
                             <Settings className="h-5 w-5" />
                         </button>
+
+                        {/* Menu dropdown de configurações */}
+                        {showSettingsMenu && (
+                            <div
+                                ref={settingsMenuRef}
+                                className="absolute right-[90px] top-14 mt-1 w-60 bg-[#3A3A3A] rounded-xl shadow-lg py-1.5 z-40 border border-gray-700 
+                                          transform origin-top-right
+                                          animate-in fade-in-50 slide-in-from-top-5 duration-150"
+                                role="menu"
+                            >
+                                <div className="px-4 py-2 border-b border-gray-700">
+                                    <p className="font-medium text-white">Cadastros do Sistema</p>
+                                </div>
+
+                                <div className="py-1.5">
+                                    <Link href="/dashboard/clientes/cadastro" className="flex items-center px-4 py-2 text-sm text-gray-200 hover:bg-[#4a4a4a] hover:text-[#09A08D] transition-colors" role="menuitem">
+                                        <Building2 size={16} className="mr-3 text-gray-300" />
+                                        Clientes
+                                    </Link>
+                                    <Link href="/dashboard/contatos/cadastro" className="flex items-center px-4 py-2 text-sm text-gray-200 hover:bg-[#4a4a4a] hover:text-[#09A08D] transition-colors" role="menuitem">
+                                        <UserPlus size={16} className="mr-3 text-gray-300" />
+                                        Contatos
+                                    </Link>
+                                    <Link href="/dashboard/usuarios/cadastro" className="flex items-center px-4 py-2 text-sm text-gray-200 hover:bg-[#4a4a4a] hover:text-[#09A08D] transition-colors" role="menuitem">
+                                        <Users size={16} className="mr-3 text-gray-300" />
+                                        Usuários
+                                    </Link>
+                                    <Link href="/dashboard/agendas/cadastro" className="flex items-center px-4 py-2 text-sm text-gray-200 hover:bg-[#4a4a4a] hover:text-[#09A08D] transition-colors" role="menuitem">
+                                        <Calendar size={16} className="mr-3 text-gray-300" />
+                                        Agendas Google
+                                    </Link>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Separador vertical em telas maiores */}

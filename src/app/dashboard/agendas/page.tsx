@@ -34,6 +34,7 @@ const calendars = [
 
 export default function DesenvolvimentosPage() {
     const [selectedCalendarId, setSelectedCalendarId] = useState(calendars[0].id);
+    const [iframeKey, setIframeKey] = useState(Date.now()); // Add a key state to force iframe refresh
 
     const selectedCalendar = calendars.find(calendar => calendar.id === selectedCalendarId) || calendars[0];
 
@@ -47,6 +48,11 @@ export default function DesenvolvimentosPage() {
 
         // Abre em uma nova aba
         window.open(createEventUrl, '_blank');
+    };
+
+    // Function to refresh the calendar iframe
+    const handleRefresh = () => {
+        setIframeKey(Date.now()); // Update the key to force a re-render of the iframe
     };
 
     return (
@@ -116,32 +122,45 @@ export default function DesenvolvimentosPage() {
                         </div>
                         <h4 className="font-medium text-sm text-gray-900">{selectedCalendar.name}</h4>
                     </div>
-                    <a
-                        href={selectedCalendar.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center"
-                    >
-                        <span>Ver no Google</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                    </a>
+                    <div className="flex items-center space-x-3">
+                        <button
+                            onClick={handleRefresh}
+                            className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center"
+                            title="Atualizar agenda"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span className="ml-1">Atualizar</span>
+                        </button>
+                        <a
+                            href={selectedCalendar.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center"
+                        >
+                            <span>Ver no Google</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                        </a>
+                    </div>
                 </div>
 
-                {/* Iframe mais alto para ocupar toda a tela disponível */}
+                {/* Iframe com altura ainda mais aumentada para ocupar mais espaço na tela */}
                 <motion.div
                     key={selectedCalendarId}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.3 }}
-                    className="w-full h-[calc(100vh-200px)]"
+                    className="w-full h-[calc(100vh-140px)]"
                 >
                     <iframe
+                        key={iframeKey} // Add key prop to force re-render when refresh is clicked
                         src={selectedCalendar.url}
                         style={{ border: 0 }}
                         width="100%"
-                        height="100%"
+                        height="600"
                         frameBorder="0"
                         scrolling="no"
                         title={`Agenda de ${selectedCalendar.name}`}

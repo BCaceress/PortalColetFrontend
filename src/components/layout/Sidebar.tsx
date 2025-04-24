@@ -29,14 +29,14 @@ export default function Sidebar({ collapsed, mobileOpen }: SidebarProps) {
             icon: <LayoutDashboard size={20} className="stroke-current" />
         },
         {
+            name: 'Usuários',
+            href: '/dashboard/usuarios',
+            icon: <Users size={20} className="stroke-current" />
+        },
+        {
             name: 'Clientes',
             href: '/dashboard/clientes',
             icon: <Building2 size={20} className="stroke-current" />
-        },
-        {
-            name: 'Agendas',
-            href: '/dashboard/agendas',
-            icon: <Calendar size={20} className="stroke-current" />
         },
         {
             name: 'Contatos',
@@ -44,24 +44,24 @@ export default function Sidebar({ collapsed, mobileOpen }: SidebarProps) {
             icon: <User size={20} className="stroke-current" />
         },
         {
-            name: 'Usuários',
-            href: '/dashboard/usuarios',
-            icon: <Users size={20} className="stroke-current" />
-        },
-        {
             name: 'RATs',
             href: '/dashboard/rats',
             icon: <ClipboardList size={20} className="stroke-current" />
         },
         {
-            name: 'Base de Conhecimento',
-            href: '/dashboard/baseConhecimento',
-            icon: <Book size={20} className="stroke-current" />
+            name: 'Agendas',
+            href: '/dashboard/agendas',
+            icon: <Calendar size={20} className="stroke-current" />
         },
         {
             name: 'Relatórios',
             href: '/dashboard/relatorios',
             icon: <FileText size={20} className="stroke-current" />
+        },
+        {
+            name: 'Base de Conhecimento',
+            href: '/dashboard/baseConhecimento',
+            icon: <Book size={20} className="stroke-current" />
         },
         {
             name: 'Tickets',
