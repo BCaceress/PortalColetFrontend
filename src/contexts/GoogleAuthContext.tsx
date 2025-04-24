@@ -6,7 +6,10 @@ import { createContext, ReactNode, useContext, useEffect, useState } from 'react
 // Google Calendar API constants
 const SCOPES = [
     'https://www.googleapis.com/auth/calendar',
-    'https://www.googleapis.com/auth/calendar.events'
+    'https://www.googleapis.com/auth/calendar.events',
+    'https://www.googleapis.com/auth/userinfo.email',
+    'https://www.googleapis.com/auth/userinfo.profile',
+    'openid'
 ];
 
 // Carregando de variáveis de ambiente
@@ -57,7 +60,7 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
                 await googleCalendarService.loadGapiClient();
 
                 // Try to check current auth status
-                checkExistingAuth();
+                await checkExistingAuth();
 
                 setIsLoading(false);
             } catch (e) {
@@ -71,12 +74,34 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
     }, []);
 
     // Check if user is already authenticated (e.g., from a previous session)
-    const checkExistingAuth = () => {
+    const checkExistingAuth = async () => {
         const token = localStorage.getItem('googleAuthToken');
         if (token) {
             try {
-                // Validate token and set auth state
-                handleAuthSuccess(token);
+                // Validate token by making a test request
+                const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    // Token is still valid
+                    const data = await response.json();
+                    const userInfo = {
+                        id: data.sub,
+                        name: data.name,
+                        email: data.email,
+                        imageUrl: data.picture
+                    };
+                    handleAuthSuccess(token, userInfo);
+                } else {
+                    // Token is invalid or expired, remove it
+                    console.log('Stored token is invalid or expired, removing');
+                    localStorage.removeItem('googleAuthToken');
+                    setIsAuthenticated(false);
+                }
             } catch (error) {
                 console.error('Erro ao validar token armazenado:', error);
                 localStorage.removeItem('googleAuthToken');
@@ -119,7 +144,10 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
     const fetchUserInfo = async (token: string) => {
         try {
             const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                headers: { Authorization: `Bearer ${token}` }
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'application/json'
+                }
             });
 
             if (!response.ok) {
@@ -127,6 +155,7 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
             }
 
             const data = await response.json();
+            console.log('User info fetched successfully:', data);
 
             const userInfo = {
                 id: data.sub,
@@ -138,6 +167,11 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
             setUser(userInfo);
         } catch (err) {
             console.error('Erro ao buscar informações do usuário:', err);
+            // If we failed to get user info, token might be invalid
+            if (err instanceof Error && err.message.includes('401')) {
+                console.log('Token invalid, signing out');
+                signOut();
+            }
         }
     };
 
@@ -162,6 +196,7 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
             const tokenClient = window.google.accounts.oauth2.initTokenClient({
                 client_id: CLIENT_ID,
                 scope: SCOPES.join(' '),
+                prompt: 'consent',  // Always ask for consent to ensure fresh tokens
                 callback: (response: any) => {
                     if (response.error) {
                         console.error('Erro de autenticação Google:', response.error);
@@ -172,18 +207,24 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
 
                     // Handle successful auth
                     const token = response.access_token;
+                    console.log('Authentication successful, token obtained');
 
-                    // Get user info
+                    // Get user info with proper headers
                     fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                        headers: { Authorization: `Bearer ${token}` }
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/json'
+                        }
                     })
                         .then(res => {
                             if (!res.ok) {
+                                console.error(`User info fetch failed with status: ${res.status}`);
                                 throw new Error(`Erro ao buscar informações do usuário: ${res.status}`);
                             }
                             return res.json();
                         })
                         .then(data => {
+                            console.log('User info obtained:', data);
                             const userInfo = {
                                 id: data.sub,
                                 name: data.name,
@@ -203,7 +244,8 @@ export function GoogleAuthProvider({ children }: { children: ReactNode }) {
                 }
             });
 
-            tokenClient.requestAccessToken();
+            // Request a new access token
+            tokenClient.requestAccessToken({ prompt: 'consent' });
 
         } catch (e) {
             console.error('Erro ao autenticar com Google', e);

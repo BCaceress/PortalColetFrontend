@@ -143,6 +143,11 @@ class GoogleCalendarService {
             throw new Error('Token de acesso inválido');
         }
         this.accessToken = token;
+
+        // Set auth token for GAPI if it's already loaded
+        if (this.gapiLoaded && window.gapi?.client) {
+            window.gapi.client.setToken({ access_token: token });
+        }
     }
 
     isAuthenticated(): boolean {
@@ -171,6 +176,12 @@ class GoogleCalendarService {
                                 apiKey: API_KEY,
                                 discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
                             });
+
+                            // Set the token if we already have one
+                            if (this.accessToken) {
+                                window.gapi.client.setToken({ access_token: this.accessToken });
+                            }
+
                             this.gapiLoaded = true;
                             resolve();
                         } catch (error) {
@@ -193,6 +204,12 @@ class GoogleCalendarService {
                             apiKey: API_KEY,
                             discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'],
                         });
+
+                        // Set the token if we already have one
+                        if (this.accessToken) {
+                            window.gapi.client.setToken({ access_token: this.accessToken });
+                        }
+
                         this.gapiLoaded = true;
                         resolve();
                     } catch (error) {
@@ -381,6 +398,11 @@ class GoogleCalendarService {
     private async ensureGapiLoaded() {
         if (!this.gapiLoaded) {
             await this.loadGapiClient();
+        }
+
+        // Ensure token is set in GAPI client
+        if (this.accessToken && window.gapi?.client) {
+            window.gapi.client.setToken({ access_token: this.accessToken });
         }
     }
 }
