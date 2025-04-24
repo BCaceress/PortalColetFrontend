@@ -8,6 +8,7 @@ import { Calendar, ClipboardList, Edit, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 // Import our reusable components
+import { EmailRAT } from '@/components/Emails/EmailRAT';
 import { ActiveFilters } from '@/components/ui/ActiveFilters';
 import { Column, DataTable } from '@/components/ui/DataTable';
 import { FilterPanel } from '@/components/ui/FilterPanel';
@@ -48,6 +49,7 @@ interface RAT {
     contato?: {
         id_contato: number;
         ds_nome: string;
+        ds_email?: string;
     };
 }
 
@@ -434,6 +436,8 @@ export default function RATs() {
             >
                 <Edit size={18} />
             </motion.button>
+            {/* Replace the email button with our new component */}
+            <EmailRAT rat={rat} variant="icon" />
         </>
     );
 
@@ -511,6 +515,8 @@ export default function RATs() {
                     <Edit size={14} />
                     Editar
                 </motion.button>
+                {/* Replace the email button with our new component */}
+                <EmailRAT rat={rat} variant="button" size="sm" />
             </div>
         </div>
     );

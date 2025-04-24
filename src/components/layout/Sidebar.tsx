@@ -1,8 +1,12 @@
 'use client';
 
 import {
+    Book,
     Building2,
+    Calendar,
     ClipboardList,
+    FileText,
+    Headset,
     LayoutDashboard,
     User,
     Users
@@ -30,6 +34,11 @@ export default function Sidebar({ collapsed, mobileOpen }: SidebarProps) {
             icon: <Building2 size={20} className="stroke-current" />
         },
         {
+            name: 'Agendas',
+            href: '/dashboard/agendas',
+            icon: <Calendar size={20} className="stroke-current" />
+        },
+        {
             name: 'Contatos',
             href: '/dashboard/contatos',
             icon: <User size={20} className="stroke-current" />
@@ -43,6 +52,21 @@ export default function Sidebar({ collapsed, mobileOpen }: SidebarProps) {
             name: 'RATs',
             href: '/dashboard/rats',
             icon: <ClipboardList size={20} className="stroke-current" />
+        },
+        {
+            name: 'Base de Conhecimento',
+            href: '/dashboard/baseConhecimento',
+            icon: <Book size={20} className="stroke-current" />
+        },
+        {
+            name: 'Relatórios',
+            href: '/dashboard/relatorios',
+            icon: <FileText size={20} className="stroke-current" />
+        },
+        {
+            name: 'Tickets',
+            href: '/dashboard/chamados',
+            icon: <Headset size={20} className="stroke-current" />
         },
     ];
 

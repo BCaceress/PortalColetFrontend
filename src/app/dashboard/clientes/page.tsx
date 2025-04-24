@@ -2,11 +2,12 @@
 
 import api from '@/services/api';
 import { motion } from 'framer-motion';
-import { Building2, Eye, Plus } from 'lucide-react';
+import { Building2, Eye, Mail, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 // Import our reusable components
+import { EmailFormModal } from '@/components/modals/EmailFormModal';
 import { ActiveFilters } from '@/components/ui/ActiveFilters';
 import { Column, DataTable } from '@/components/ui/DataTable';
 import { FilterPanel } from '@/components/ui/FilterPanel';
@@ -59,7 +60,26 @@ interface Cliente {
         ds_nome: string;
         ds_cargo: string;
     }[];
+    emails?: {
+        id_email: number;
+        ds_email: string;
+        ds_tipo: string;
+        fl_ativo: boolean;
+    }[];
 }
+
+// Interface for email management
+interface ClienteEmail {
+    id_email?: number;
+    id_cliente: number;
+    ds_email: string;
+    ds_tipo: string;
+    fl_ativo: boolean;
+    ds_descricao?: string;
+}
+
+// Modal mode type
+type ModalMode = 'create' | 'edit';
 
 export default function Clientes() {
     const router = useRouter();
@@ -73,6 +93,13 @@ export default function Clientes() {
     const [matrizFilter, setMatrizFilter] = useState<'todos' | 'matriz' | 'filial'>('todos');
     const [animateItems, setAnimateItems] = useState(false);
 
+    // Email modal state
+    const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+    const [emailModalMode, setEmailModalMode] = useState<ModalMode>('create');
+    const [currentEmail, setCurrentEmail] = useState<ClienteEmail | null>(null);
+    const [selectedCliente, setSelectedCliente] = useState<{ id_cliente: number; ds_nome: string } | null>(null);
+    const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
     // Função para visualizar detalhes do cliente
     const handleViewClientDetails = (cliente: Cliente) => {
         router.push(`/dashboard/clientes/visualizar/${cliente.id_cliente}`);
@@ -83,27 +110,64 @@ export default function Clientes() {
         router.push('/dashboard/clientes/cadastro');
     };
 
+    // Função para gerenciar emails do cliente
+    const handleManageClientEmails = (cliente: Cliente) => {
+        setSelectedCliente({ id_cliente: cliente.id_cliente, ds_nome: cliente.ds_nome });
+        setCurrentEmail(null);
+        setEmailModalMode('create');
+        setIsEmailModalOpen(true);
+    };
+
+    // Modal success handler
+    const handleModalSuccess = (message: string) => {
+        setNotification({
+            type: 'success',
+            message
+        });
+
+        // Refresh client data to show updated email list
+        fetchClientes();
+
+        // Auto-hide notification after 3 seconds
+        setTimeout(() => {
+            setNotification(null);
+        }, 3000);
+    };
+
+    // Modal error handler
+    const handleModalError = (message: string) => {
+        setNotification({
+            type: 'error',
+            message
+        });
+
+        // Auto-hide notification after 3 seconds
+        setTimeout(() => {
+            setNotification(null);
+        }, 3000);
+    };
+
     useEffect(() => {
-        const fetchClientes = async () => {
-            try {
-                setLoading(true);
-                const response = await api.get('/clientes');
-                setClientes(response.data);
-                setFilteredClientes(response.data);
-                setError(null);
-
-                // Trigger animation after data loads
-                setTimeout(() => setAnimateItems(true), 100);
-            } catch (err) {
-                console.error('Erro ao buscar clientes:', err);
-                setError('Não foi possível carregar os clientes. Tente novamente mais tarde.');
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchClientes();
     }, []);
+
+    const fetchClientes = async () => {
+        try {
+            setLoading(true);
+            const response = await api.get('/clientes');
+            setClientes(response.data);
+            setFilteredClientes(response.data);
+            setError(null);
+
+            // Trigger animation after data loads
+            setTimeout(() => setAnimateItems(true), 100);
+        } catch (err) {
+            console.error('Erro ao buscar clientes:', err);
+            setError('Não foi possível carregar os clientes. Tente novamente mais tarde.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleSearch = (term: string) => {
         setSearchTerm(term);
@@ -335,9 +399,16 @@ export default function Clientes() {
         }
     ];
 
-    // Row actions - Only view button now
+    // Row actions - View and Email management buttons
     const clienteActions = (cliente: Cliente) => (
         <>
+            <button
+                onClick={() => handleManageClientEmails(cliente)}
+                className="p-1 text-blue-500 rounded hover:bg-blue-100 transition-colors mr-1"
+                title="Gerenciar E-mails"
+            >
+                <Mail size={18} />
+            </button>
             <button
                 onClick={() => handleViewClientDetails(cliente)}
                 className="p-1 text-gray-500 rounded hover:bg-gray-100 transition-colors"
@@ -423,6 +494,18 @@ export default function Clientes() {
                 <motion.button
                     onClick={(e) => {
                         e.stopPropagation();
+                        handleManageClientEmails(cliente);
+                    }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 flex items-center gap-1"
+                >
+                    <Mail size={14} />
+                    E-mails
+                </motion.button>
+                <motion.button
+                    onClick={(e) => {
+                        e.stopPropagation();
                         handleViewClientDetails(cliente);
                     }}
                     whileHover={{ scale: 1.05 }}
@@ -490,6 +573,27 @@ export default function Clientes() {
                 </motion.div>
             </div>
 
+            {/* Notification */}
+            {notification && (
+                <div className="mb-4 animate-in slide-in-from-top duration-300">
+                    <div className={`p-4 rounded-lg border flex items-center ${notification.type === 'success'
+                        ? 'bg-green-50 border-green-200 text-green-800'
+                        : 'bg-red-50 border-red-200 text-red-800'
+                        }`}>
+                        {notification.type === 'success' ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                        )}
+                        <span className="text-sm font-medium">{notification.message}</span>
+                    </div>
+                </div>
+            )}
+
             {/* Data table */}
             <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -527,6 +631,17 @@ export default function Clientes() {
             <FloatingActionButton
                 icon={<Plus size={24} />}
                 onClick={handleCreateNewClient}
+            />
+
+            {/* Email Modal */}
+            <EmailFormModal
+                isOpen={isEmailModalOpen}
+                onClose={() => setIsEmailModalOpen(false)}
+                modalMode={emailModalMode}
+                currentEmail={currentEmail}
+                cliente={selectedCliente}
+                onSuccess={handleModalSuccess}
+                onError={handleModalError}
             />
         </div>
     );

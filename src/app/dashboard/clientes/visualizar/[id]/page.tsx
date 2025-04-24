@@ -1,27 +1,42 @@
 'use client';
 
+import { EmailFormModal } from '@/components/modals/EmailFormModal';
 import api from '@/services/api';
 import { ClientePayload } from '@/types/cliente';
 import { formatCEP, formatCNPJ } from '@/utils/formatters';
 import {
     AlertCircle,
     ArrowLeft,
+    AtSign,
     Building2,
-    CalendarRange,
-    Clock,
     Download,
     Edit3,
     ExternalLink,
     Globe,
+    Mail,
     MapPin,
     MoreHorizontal,
     Phone,
+    Plus,
     RefreshCw,
     Smartphone,
     Users
 } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+
+// Interface for client emails
+interface ClienteEmail {
+    id_email?: number;
+    id_cliente: number;
+    ds_email: string;
+    ds_tipo: string;
+    fl_ativo: boolean;
+    ds_descricao?: string;
+}
+
+// Modal mode type
+type ModalMode = 'create' | 'edit';
 
 export default function VisualizarCliente() {
     const router = useRouter();
@@ -33,6 +48,14 @@ export default function VisualizarCliente() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState('identificacao');
+    const [clienteEmails, setClienteEmails] = useState<ClienteEmail[]>([]);
+    const [loadingEmails, setLoadingEmails] = useState(false);
+
+    // Email modal state
+    const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+    const [emailModalMode, setEmailModalMode] = useState<ModalMode>('create');
+    const [currentEmail, setCurrentEmail] = useState<ClienteEmail | null>(null);
+    const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
     useEffect(() => {
         const fetchClienteData = async () => {
@@ -53,6 +76,97 @@ export default function VisualizarCliente() {
             fetchClienteData();
         }
     }, [clienteId]);
+
+    // Fetch client emails when the emails tab is selected
+    useEffect(() => {
+        if (activeTab === 'emails' && clienteId) {
+            fetchClienteEmails();
+        }
+    }, [activeTab, clienteId]);
+
+    // Function to fetch client emails
+    const fetchClienteEmails = async () => {
+        if (!clienteId) return;
+
+        try {
+            setLoadingEmails(true);
+            const response = await api.get(`/clientes/${clienteId}/emails`);
+            setClienteEmails(response.data);
+        } catch (err) {
+            console.error('Erro ao carregar emails do cliente:', err);
+            setNotification({
+                type: 'error',
+                message: 'Não foi possível carregar os emails do cliente.'
+            });
+        } finally {
+            setLoadingEmails(false);
+        }
+    };
+
+    // Handle adding a new email
+    const handleAddEmail = () => {
+        setCurrentEmail(null);
+        setEmailModalMode('create');
+        setIsEmailModalOpen(true);
+    };
+
+    // Handle editing an existing email
+    const handleEditEmail = (email: ClienteEmail) => {
+        setCurrentEmail(email);
+        setEmailModalMode('edit');
+        setIsEmailModalOpen(true);
+    };
+
+    // Handle deleting an email
+    const handleDeleteEmail = async (emailId: number) => {
+        if (!window.confirm('Tem certeza que deseja excluir este email?')) {
+            return;
+        }
+
+        try {
+            await api.delete(`/clientes/emails/${emailId}`);
+            setNotification({
+                type: 'success',
+                message: 'Email excluído com sucesso!'
+            });
+            fetchClienteEmails();
+        } catch (err) {
+            console.error('Erro ao excluir email:', err);
+            setNotification({
+                type: 'error',
+                message: 'Erro ao excluir o email. Tente novamente.'
+            });
+        }
+    };
+
+    // Modal success handler
+    const handleModalSuccess = (message: string) => {
+        setNotification({
+            type: 'success',
+            message
+        });
+
+        // Refresh emails list
+        fetchClienteEmails();
+
+        // Auto-hide notification after 3 seconds
+        setTimeout(() => {
+            setNotification(null);
+        }, 3000);
+    };
+
+    // Modal error handler
+    const handleModalError = (message: string) => {
+        setNotification({
+            type: 'error',
+            message
+        });
+
+        // Auto-hide notification after 3 seconds
+        setTimeout(() => {
+            setNotification(null);
+        }, 3000);
+    };
 
     const handleEdit = () => {
         router.push(`/dashboard/clientes/editar/${clienteId}`);
@@ -160,6 +274,8 @@ export default function VisualizarCliente() {
                 return <FileIcon size={18} />;
             case 'alfasig':
                 return <DatabaseIcon size={18} />;
+            case 'emails':
+                return <Mail size={18} />;
             default:
                 return null;
         }
@@ -296,7 +412,7 @@ export default function VisualizarCliente() {
             <div className="bg-white border-b border-gray-200 sticky top-16 z-10">
                 <div className="max-w-7xl mx-auto">
                     <nav className="flex overflow-x-auto">
-                        {['identificacao', 'endereco', 'contrato', 'alfasig'].map(tab => (
+                        {['identificacao', 'endereco', 'contrato', 'alfasig', 'emails'].map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
@@ -310,6 +426,7 @@ export default function VisualizarCliente() {
                                     {tab === 'endereco' && 'Endereço'}
                                     {tab === 'contrato' && 'Contrato'}
                                     {tab === 'alfasig' && 'Alfasig'}
+                                    {tab === 'emails' && 'E-mails'}
                                 </span>
                             </button>
                         ))}
@@ -317,181 +434,159 @@ export default function VisualizarCliente() {
                 </div>
             </div>
 
+            {/* Notification */}
+            {notification && (
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+                    <div className={`p-4 rounded-lg border flex items-center ${notification.type === 'success'
+                        ? 'bg-green-50 border-green-200 text-green-800'
+                        : 'bg-red-50 border-red-200 text-red-800'
+                        }`}>
+                        {notification.type === 'success' ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            </svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                        )}
+                        <span className="text-sm font-medium">{notification.message}</span>
+                    </div>
+                </div>
+            )}
+
             {/* Content */}
             <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
                 {/* Identification Tab */}
                 {activeTab === 'identificacao' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                        <div className="lg:col-span-8 space-y-6">
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all">
-                                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center border-b border-gray-100 pb-3">
-                                    <Building2 size={20} className="mr-2 text-blue-600" />
-                                    Dados de Identificação
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <div>
-                                        <div className="space-y-6">
-                                            <DataItem label="Razão Social" value={cliente.ds_razao_social} />
-                                            <DataItem label="Nome Fantasia" value={cliente.ds_nome} />
-                                            <DataItem label="CNPJ" value={formatCNPJ(cliente.nr_cnpj)} />
-                                            <DataItem label="Inscrição Estadual" value={cliente.nr_inscricao_estadual} />
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <div className="space-y-6">
-                                            <DataItem
-                                                label="Tipo"
-                                                value={cliente.fl_matriz ? 'Matriz' : 'Filial'}
-                                                className={cliente.fl_matriz ? 'text-purple-700' : 'text-blue-700'}
-                                            />
-                                            <DataItem label="Código ZZ" value={cliente.nr_codigo_zz} />
-                                            <DataItem
-                                                label="Site"
-                                                value={
-                                                    cliente.ds_site && (
-                                                        <a
-                                                            href={cliente.ds_site.startsWith('http') ? cliente.ds_site : `http://${cliente.ds_site}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="flex items-center text-blue-600 hover:text-blue-800 transition-colors group"
-                                                        >
-                                                            {cliente.ds_site}
-                                                            <ExternalLink size={14} className="ml-1 opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                        </a>
-                                                    )
-                                                }
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* General Information Card */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center mb-5 border-b border-gray-100 pb-3">
+                                <Building2 size={18} className="mr-2 text-blue-600" />
+                                Informações Gerais
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <DataItem label="Nome Fantasia" value={cliente.ds_nome} />
+                                <DataItem label="Razão Social" value={cliente.ds_razao_social} />
+                                <DataItem label="CNPJ" value={formatCNPJ(cliente.nr_cnpj)} />
+                                <DataItem label="Inscrição Estadual" value={cliente.nr_inscricao_estadual} />
+                                <DataItem label="Status" value={cliente.ds_situacao} className={`font-medium ${cliente.ds_situacao === 'Ativo' ? 'text-emerald-600' : cliente.ds_situacao === 'Inativo' ? 'text-red-600' : 'text-amber-600'}`} />
+                                <DataItem label="Tipo" value={cliente.fl_matriz ? 'Matriz' : 'Filial'} />
+                                <DataItem label="Site" value={cliente.ds_site ? (
+                                    <a href={cliente.ds_site.startsWith('http') ? cliente.ds_site : `http://${cliente.ds_site}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline underline-offset-2 flex items-center">
+                                        {cliente.ds_site} <ExternalLink size={14} className="ml-1" />
+                                    </a>
+                                ) : null} />
+                                <DataItem label="Código IBGE" value={cliente.nr_codigo_ibge} />
                             </div>
                         </div>
-                        <div className="lg:col-span-4 space-y-6">
-                            {cliente.tx_observacao_ident ? (
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                                    <h4 className="flex items-center text-lg font-semibold text-gray-900 mb-4">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-blue-600">
-                                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                                        </svg>
-                                        Observações
-                                    </h4>
-                                    <div className="bg-gray-50 p-4 rounded-md border border-gray-100">
-                                        <p className="text-gray-700 whitespace-pre-wrap">{cliente.tx_observacao_ident}</p>
-                                    </div>
+
+                        {/* Contacts Card */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all">
+                            <div className="flex justify-between items-center mb-5 border-b border-gray-100 pb-3">
+                                <h3 className="text-lg font-bold text-gray-900 flex items-center">
+                                    <Users size={18} className="mr-2 text-blue-600" />
+                                    Contatos
+                                </h3>
+                                <button className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center">
+                                    <Plus size={16} className="mr-1" />
+                                    Adicionar Contato
+                                </button>
+                            </div>
+
+                            {cliente.contatos && cliente.contatos.length > 0 ? (
+                                <div className="space-y-4">
+                                    {cliente.contatos.map(contato => (
+                                        <div key={contato.id_contato} className="border border-gray-200 p-3 rounded-lg hover:border-blue-200 hover:bg-blue-50/30 transition-all">
+                                            <div className="flex justify-between">
+                                                <h4 className="font-medium text-gray-900">{contato.ds_nome}</h4>
+                                                <div className="space-x-1">
+                                                    <button className="text-blue-600 hover:text-blue-800 p-1">
+                                                        <Edit3 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            {contato.ds_cargo && (
+                                                <p className="text-sm text-gray-600">{contato.ds_cargo}</p>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
                             ) : (
-                                <div className="bg-gray-50/50 rounded-xl border border-dashed border-gray-200 p-6 flex flex-col items-center justify-center text-center h-full">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 mb-2">
-                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                                    </svg>
-                                    <p className="text-gray-500">Nenhuma observação registrada</p>
+                                <div className="h-48 flex flex-col items-center justify-center text-center p-6 border border-dashed border-gray-300 rounded-lg">
+                                    <Users size={32} className="text-gray-400 mb-3" />
+                                    <p className="text-gray-500 mb-2">Nenhum contato cadastrado</p>
+                                    <p className="text-gray-400 text-sm mb-4">Adicione contatos para este cliente para facilitar a comunicação.</p>
+                                    <button className="flex items-center px-4 py-2 text-sm font-medium rounded-md border border-blue-600 text-blue-600 hover:bg-blue-50">
+                                        <Plus size={16} className="mr-1.5" />
+                                        Adicionar Primeiro Contato
+                                    </button>
                                 </div>
                             )}
+                        </div>
+
+                        {/* Observations Card */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center mb-5 border-b border-gray-100 pb-3">
+                                <DocumentIcon size={18} className="mr-2 text-blue-600" />
+                                Observações
+                            </h3>
+                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                {cliente.tx_observacao_ident ? (
+                                    <p className="text-gray-700 whitespace-pre-wrap">{cliente.tx_observacao_ident}</p>
+                                ) : (
+                                    <p className="text-gray-500 italic">Nenhuma observação registrada</p>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
 
                 {/* Address Tab */}
                 {activeTab === 'endereco' && (
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                        <div className="lg:col-span-8">
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all">
-                                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center border-b border-gray-100 pb-3">
-                                    <MapPin size={20} className="mr-2 text-blue-600" />
-                                    Endereço
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
-                                    <div className="col-span-2">
-                                        <DataItem
-                                            label="Endereço Completo"
-                                            value={
-                                                <>
-                                                    {cliente.ds_endereco}, {cliente.nr_numero}
-                                                    {cliente.ds_complemento ? `, ${cliente.ds_complemento}` : ''}
-                                                </>
-                                            }
-                                        />
+                    <div className="grid grid-cols-1 gap-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center mb-5 border-b border-gray-100 pb-3">
+                                <MapPin size={18} className="mr-2 text-blue-600" />
+                                Endereço
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="col-span-2">
+                                    <DataItem label="Endereço" value={`${cliente.ds_endereco}, ${cliente.nr_numero}${cliente.ds_complemento ? `, ${cliente.ds_complemento}` : ''}`} />
+                                </div>
+                                <DataItem label="Bairro" value={cliente.ds_bairro} />
+                                <DataItem label="CEP" value={formatCEP(cliente.ds_cep)} />
+                                <DataItem label="Cidade" value={cliente.ds_cidade} />
+                                <DataItem label="Estado" value={cliente.ds_uf} />
+                                <DataItem label="Região" value={cliente.ds_regiao || '-'} />
+
+                                {(cliente.nr_latitude && cliente.nr_longitude) && (
+                                    <div className="col-span-2 mt-4">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <h4 className="font-medium text-gray-900">Localização no Mapa</h4>
+                                            <a
+                                                href={`https://www.google.com/maps/search/?api=1&query=${cliente.nr_latitude},${cliente.nr_longitude}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                                            >
+                                                Ver no Google Maps
+                                                <ExternalLink size={14} className="ml-1" />
+                                            </a>
+                                        </div>
+                                        <div className="h-48 sm:h-64 bg-gray-100 rounded-lg border border-gray-200 overflow-hidden relative">
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-500">
+                                                <MapPin size={24} className="mb-2" />
+                                                <p className="text-sm">Mapa disponível no Google Maps</p>
+                                                <div className="mt-2 text-xs">
+                                                    <span className="block">Latitude: {cliente.nr_latitude}</span>
+                                                    <span>Longitude: {cliente.nr_longitude}</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <DataItem label="Bairro" value={cliente.ds_bairro} />
-                                    <DataItem label="CEP" value={formatCEP(cliente.ds_cep)} />
-                                    <DataItem label="Cidade/UF" value={`${cliente.ds_cidade}/${cliente.ds_uf}`} />
-                                    <DataItem label="Código IBGE" value={cliente.nr_codigo_ibge} />
-
-                                    {cliente.nr_latitude !== undefined || cliente.nr_longitude !== undefined || cliente.nr_distancia_km !== undefined ? (
-                                        <div className="col-span-2 mt-4">
-                                            <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-blue-600">
-                                                    <circle cx="12" cy="10" r="3"></circle>
-                                                    <path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 1 0-16 0c0 3 2.7 6.9 8 11.7z"></path>
-                                                </svg>
-                                                Dados de Geolocalização
-                                            </h4>
-                                            <div className="bg-blue-50 rounded-lg p-4 border border-blue-100 grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                {cliente.nr_latitude !== undefined && (
-                                                    <DataItem
-                                                        label="Latitude"
-                                                        value={cliente.nr_latitude}
-                                                        className="text-blue-800"
-                                                    />
-                                                )}
-                                                {cliente.nr_longitude !== undefined && (
-                                                    <DataItem
-                                                        label="Longitude"
-                                                        value={cliente.nr_longitude}
-                                                        className="text-blue-800"
-                                                    />
-                                                )}
-                                                {cliente.nr_distancia_km !== undefined && (
-                                                    <DataItem
-                                                        label="Distância (km)"
-                                                        value={cliente.nr_distancia_km}
-                                                        className="text-blue-800"
-                                                    />
-                                                )}
-                                            </div>
-                                        </div>
-                                    ) : null}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="lg:col-span-4">
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all h-full">
-                                <h4 className="font-semibold text-gray-800 mb-4 flex items-center">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-blue-600">
-                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                        <line x1="16" y1="2" x2="16" y2="6"></line>
-                                        <line x1="8" y1="2" x2="8" y2="6"></line>
-                                        <line x1="3" y1="10" x2="21" y2="10"></line>
-                                    </svg>
-                                    Mapa
-                                </h4>
-                                <div className="bg-gray-50 rounded-lg border border-gray-200 aspect-square flex items-center justify-center overflow-hidden relative">
-                                    {cliente.nr_latitude && cliente.nr_longitude ? (
-                                        <a
-                                            href={`https://www.google.com/maps?q=${cliente.nr_latitude},${cliente.nr_longitude}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="w-full h-full flex items-center justify-center bg-gray-100 group"
-                                        >
-                                            <div className="absolute inset-0 bg-cover bg-center opacity-70 group-hover:opacity-90 transition-opacity"
-                                                style={{
-                                                    backgroundImage: `url('https://maps.googleapis.com/maps/api/staticmap?center=${cliente.nr_latitude},${cliente.nr_longitude}&zoom=14&size=400x400&markers=color:red%7C${cliente.nr_latitude},${cliente.nr_longitude}&key=YOUR_API_KEY')`
-                                                }}>
-                                            </div>
-                                            <div className="bg-white rounded-full p-3 z-10 shadow-lg group-hover:scale-110 transition-transform">
-                                                <MapPin size={24} className="text-red-500" />
-                                            </div>
-                                        </a>
-                                    ) : (
-                                        <div className="text-center p-4">
-                                            <MapPin size={32} className="text-gray-400 mx-auto mb-3" />
-                                            <p className="text-gray-500">Localização não disponível</p>
-                                            <p className="text-gray-400 text-sm mt-1">Coordenadas não cadastradas</p>
-                                        </div>
-                                    )}
-                                </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -499,251 +594,186 @@ export default function VisualizarCliente() {
 
                 {/* Contract Tab */}
                 {activeTab === 'contrato' && (
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                        <div className="md:col-span-8 space-y-6">
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all">
-                                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center border-b border-gray-100 pb-3">
-                                    <FileIcon size={20} className="mr-2 text-blue-600" />
-                                    Dados do Contrato
-                                </h3>
+                    <div className="grid grid-cols-1 gap-6">
+                        {/* Contract Information Card */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center mb-5 border-b border-gray-100 pb-3">
+                                <FileIcon size={18} className="mr-2 text-blue-600" />
+                                Informações de Contrato
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <DataItem label="Sistema" value={cliente.ds_sistema} />
+                                <DataItem label="Contrato" value={cliente.ds_contrato} />
+                                <DataItem
+                                    label="Data do Contrato"
+                                    value={cliente.dt_data_contrato ? new Date(cliente.dt_data_contrato).toLocaleDateString('pt-BR') : '-'}
+                                />
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-8">
-                                    <div>
-                                        <DataItem
-                                            label="Situação"
-                                            value={
-                                                <span className={`inline-flex rounded-md px-3 py-1 text-sm font-semibold ${getStatusColor(cliente.ds_situacao)}`}>
-                                                    {cliente.ds_situacao || '-'}
-                                                </span>
-                                            }
-                                        />
-                                    </div>
-                                    <DataItem label="Sistema" value={cliente.ds_sistema} />
+                                <DataItem label="Técnica Remota" value={cliente.nr_tecnica_remoto !== undefined ? `${cliente.nr_tecnica_remoto} horas` : '-'} />
+                                <DataItem label="Técnica Presencial" value={cliente.nr_tecnica_presencial !== undefined ? `${cliente.nr_tecnica_presencial} horas` : '-'} />
+                                <DataItem label="Tempo Mínimo" value={cliente.tm_minimo_horas} />
 
-                                    <DataItem
-                                        label="Data do Contrato"
-                                        value={
-                                            cliente.dt_data_contrato ? (
-                                                <span className="flex items-center">
-                                                    <CalendarRange size={15} className="text-gray-500 mr-1.5" />
-                                                    {new Date(cliente.dt_data_contrato).toLocaleDateString('pt-BR', {
-                                                        year: 'numeric',
-                                                        month: 'long'
-                                                    })}
-                                                </span>
-                                            ) : '-'
-                                        }
-                                    />
+                                <DataItem label="Nomeados" value={cliente.nr_nomeados} />
+                                <DataItem label="Simultâneos" value={cliente.nr_simultaneos} />
+                                <DataItem label="Diário de Viagem" value={cliente.ds_diario_viagem || '-'} />
 
-                                    <DataItem label="Tipo de Contrato" value={cliente.ds_contrato} />
-                                    <DataItem label="Diário de Viagem" value={cliente.ds_diario_viagem} />
-                                    <DataItem label="Região" value={cliente.ds_regiao} />
-                                </div>
-
-                                <div className="mt-8">
-                                    <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-blue-600">
-                                            <circle cx="12" cy="12" r="10"></circle>
-                                            <polyline points="12 6 12 12 16 14"></polyline>
-                                        </svg>
-                                        Valores do Contrato
-                                    </h4>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-100">
-                                        <DataItem
-                                            label="Valor Hora Remoto"
-                                            value={cliente.nr_tecnica_remoto !== undefined ? formatCurrency(cliente.nr_tecnica_remoto) : '-'}
-                                            className="text-blue-800 font-semibold"
-                                        />
-                                        <DataItem
-                                            label="Valor Hora Presencial"
-                                            value={cliente.nr_tecnica_presencial !== undefined ? formatCurrency(cliente.nr_tecnica_presencial) : '-'}
-                                            className="text-blue-800 font-semibold"
-                                        />
-                                        <DataItem
-                                            label="Mínimo de Horas"
-                                            value={
-                                                cliente.tm_minimo_horas ? (
-                                                    <span className="flex items-center">
-                                                        <Clock size={15} className="text-gray-500 mr-1.5" />
-                                                        {cliente.tm_minimo_horas}
-                                                    </span>
-                                                ) : '-'
-                                            }
-                                            className="text-blue-800 font-semibold"
-                                        />
+                                <div className="col-span-3 mt-4">
+                                    <h4 className="font-medium text-gray-900 mb-2">Observações do Contrato</h4>
+                                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                        {cliente.tx_observacao_contrato ? (
+                                            <p className="text-gray-700 whitespace-pre-wrap">{cliente.tx_observacao_contrato}</p>
+                                        ) : (
+                                            <p className="text-gray-500 italic">Nenhuma observação contratual registrada</p>
+                                        )}
                                     </div>
                                 </div>
-
-                                {cliente.ds_contrato === 'Básico' && (
-                                    <div className="mt-6">
-                                        <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                                            <Users size={18} className="mr-2 text-blue-600" />
-                                            Configurações do Contrato
-                                        </h4>
-                                        <div className="grid grid-cols-2 gap-4 bg-gradient-to-br from-purple-50 to-indigo-50 p-4 rounded-lg border border-purple-100">
-                                            <DataItem
-                                                label="Nomeados"
-                                                value={cliente.nr_nomeados}
-                                                className="text-purple-800 font-medium"
-                                            />
-                                            <DataItem
-                                                label="Simultâneos"
-                                                value={cliente.nr_simultaneos}
-                                                className="text-purple-800 font-medium"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
                             </div>
-                        </div>
-
-                        <div className="md:col-span-4">
-                            {cliente.tx_observacao_contrato ? (
-                                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all h-full">
-                                    <h4 className="font-semibold text-gray-800 mb-4 flex items-center">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-blue-600">
-                                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                                        </svg>
-                                        Observações do Contrato
-                                    </h4>
-                                    <div className="bg-gray-50 p-4 rounded-md border border-gray-100">
-                                        <p className="text-gray-700 whitespace-pre-wrap">{cliente.tx_observacao_contrato}</p>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="bg-gray-50/50 rounded-xl border border-dashed border-gray-200 p-6 flex flex-col items-center justify-center text-center h-full">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 mb-2">
-                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                                    </svg>
-                                    <p className="text-gray-500">Nenhuma observação de contrato registrada</p>
-                                </div>
-                            )}
                         </div>
                     </div>
                 )}
 
                 {/* Alfasig Tab */}
                 {activeTab === 'alfasig' && (
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
-                        <div className="md:col-span-12">
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all">
-                                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center border-b border-gray-100 pb-3">
-                                    <DatabaseIcon size={20} className="mr-2 text-blue-600" />
-                                    Informações Alfasig
-                                </h3>
+                    <div className="grid grid-cols-1 gap-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center mb-5 border-b border-gray-100 pb-3">
+                                <DatabaseIcon size={18} className="mr-2 text-blue-600" />
+                                Informações Alfasig
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <DataItem label="Código ZZ" value={cliente.nr_codigo_zz} />
+                                <DataItem label="Franquia NF" value={cliente.nr_franquia_nf} />
+                                <DataItem label="Quantidade de Documentos" value={cliente.nr_qtde_documentos} />
 
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    <div className="space-y-6">
-                                        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 p-6 rounded-lg border border-indigo-100 mb-6">
-                                            <DataItem
-                                                label="Franquia NF"
-                                                value={
-                                                    <span className={`inline-flex rounded-md px-3 py-1 text-sm font-semibold ${cliente.ds_franquia_nf === 'Colet'
-                                                        ? 'bg-indigo-100 text-indigo-800'
-                                                        : 'bg-gray-100 text-gray-800'
-                                                        }`}>
-                                                        {cliente.ds_franquia_nf || 'Não definida'}
-                                                    </span>
-                                                }
-                                            />
-                                        </div>
-
-                                        {cliente.ds_franquia_nf === 'Colet' && (
-                                            <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                                                <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                                                    <DocumentIcon size={18} className="mr-2 text-indigo-600" />
-                                                    Tipos de Notas Fiscais
-                                                </h4>
-                                                <div className="space-y-3">
-                                                    <CheckboxItem
-                                                        checked={cliente.fl_nfe ?? false}
-                                                        label="NFe (Nota Fiscal Eletrônica)"
-                                                    />
-                                                    <CheckboxItem
-                                                        checked={cliente.fl_nfse ?? false}
-                                                        label="NFSe (Nota Fiscal de Serviço Eletrônica)"
-                                                    />
-                                                    <CheckboxItem
-                                                        checked={cliente.fl_nfce ?? false}
-                                                        label="NFCe (Nota Fiscal de Consumidor Eletrônica)"
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {cliente.ds_franquia_nf === 'Colet' && (
-                                            <div className="space-y-6">
-                                                <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                                                    <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-indigo-600">
-                                                            <line x1="12" y1="1" x2="12" y2="23"></line>
-                                                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-                                                        </svg>
-                                                        Informações de Franquia
-                                                    </h4>
-                                                    <div className="space-y-4">
-                                                        <DataItem
-                                                            label="Quantidade de Documentos"
-                                                            value={cliente.nr_qtde_documentos}
-                                                            className="font-medium"
-                                                        />
-                                                        <DataItem
-                                                            label="Valor da Franquia"
-                                                            value={cliente.nr_valor_franqia !== undefined ? formatCurrency(cliente.nr_valor_franqia) : '-'}
-                                                            className="font-semibold text-indigo-800"
-                                                        />
-                                                        <DataItem
-                                                            label="Valor Excedente"
-                                                            value={cliente.nr_valor_excendente !== undefined ? formatCurrency(cliente.nr_valor_excendente) : '-'}
-                                                            className="font-semibold text-indigo-800"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {cliente.fl_nfce && (
-                                                    <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
-                                                        <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-indigo-600">
-                                                                <rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
-                                                                <line x1="12" y1="18" x2="12.01" y2="18"></line>
-                                                                <line x1="8" y1="6" x2="16" y2="6"></line>
-                                                                <line x1="8" y1="10" x2="16" y2="10"></line>
-                                                                <line x1="8" y1="14" x2="16" y2="14"></line>
-                                                            </svg>
-                                                            Informações de PDV
-                                                        </h4>
-                                                        <div className="space-y-4">
-                                                            <DataItem
-                                                                label="Quantidade de PDV"
-                                                                value={cliente.nr_qtde_pdv}
-                                                                className="font-medium"
-                                                            />
-                                                            <DataItem
-                                                                label="Valor do PDV"
-                                                                value={cliente.nr_valor_pdv !== undefined ? formatCurrency(cliente.nr_valor_pdv) : '-'}
-                                                                className="font-semibold text-indigo-800"
-                                                            />
-                                                            {cliente.nr_qtde_pdv && cliente.nr_valor_pdv && (
-                                                                <DataItem
-                                                                    label="Valor Total PDV"
-                                                                    value={formatCurrency(cliente.nr_qtde_pdv * cliente.nr_valor_pdv)}
-                                                                    className="font-semibold text-indigo-800"
-                                                                />
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
+                                <DataItem
+                                    label="Valor da Franquia"
+                                    value={cliente.nr_valor_franqia !== undefined ? formatCurrency(cliente.nr_valor_franqia) : '-'}
+                                />
+                                <DataItem
+                                    label="Valor Excedente"
+                                    value={cliente.nr_valor_excendente !== undefined ? formatCurrency(cliente.nr_valor_excendente) : '-'}
+                                />
+                                <DataItem
+                                    label="Distância (km)"
+                                    value={cliente.nr_distancia_km !== undefined ? `${cliente.nr_distancia_km} km` : '-'}
+                                />
                             </div>
                         </div>
                     </div>
                 )}
+
+                {/* Emails Tab */}
+                {activeTab === 'emails' && (
+                    <div className="grid grid-cols-1 gap-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 transition-all">
+                            <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-5">
+                                <h3 className="text-xl font-bold text-gray-900 flex items-center">
+                                    <Mail size={20} className="mr-2 text-blue-600" />
+                                    E-mails do Cliente
+                                </h3>
+                                <button
+                                    onClick={handleAddEmail}
+                                    className="flex items-center px-3 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-all"
+                                >
+                                    <Plus size={16} className="mr-1.5" />
+                                    Gerenciar E-mails
+                                </button>
+                            </div>
+
+                            {loadingEmails ? (
+                                <div className="h-48 flex items-center justify-center">
+                                    <RefreshCw size={24} className="text-blue-500 animate-spin mr-2" />
+                                    <p className="text-gray-500">Carregando e-mails...</p>
+                                </div>
+                            ) : clienteEmails.length === 0 ? (
+                                <div className="h-48 flex flex-col items-center justify-center text-center p-6 border border-dashed border-gray-300 rounded-lg">
+                                    <Mail size={36} className="text-gray-400 mb-3" />
+                                    <p className="text-gray-500 mb-2">Nenhum e-mail cadastrado</p>
+                                    <p className="text-gray-400 text-sm mb-4">Adicione e-mails para este cliente utilizando o botão acima.</p>
+                                    <button
+                                        onClick={handleAddEmail}
+                                        className="flex items-center px-4 py-2 text-sm font-medium rounded-md border border-blue-600 text-blue-600 hover:bg-blue-50"
+                                    >
+                                        <Plus size={16} className="mr-1.5" />
+                                        Adicionar Primeiro E-mail
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {clienteEmails.map((emailItem) => {
+                                        // Split emails by semicolon
+                                        const emails = emailItem.ds_email.split(';').map(email => email.trim()).filter(Boolean);
+
+                                        return (
+                                            <div key={emailItem.id_email} className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <h4 className="font-medium text-gray-900 flex items-center">
+                                                        <AtSign size={16} className="text-blue-600 mr-1.5" />
+                                                        {`${emails.length} ${emails.length === 1 ? 'E-mail' : 'E-mails'}`}
+                                                    </h4>
+                                                    <button
+                                                        onClick={() => handleEditEmail(emailItem)}
+                                                        className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                                                    >
+                                                        <Edit3 size={14} className="mr-1" />
+                                                        Editar
+                                                    </button>
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                    {emails.map((email, index) => (
+                                                        <div key={index} className="flex items-center text-sm bg-white px-3 py-2 rounded-md border border-gray-100">
+                                                            <span className="text-gray-900">{email}</span>
+                                                            <a
+                                                                href={`mailto:${email}`}
+                                                                className="ml-auto text-blue-600 hover:text-blue-800 p-1"
+                                                                title="Enviar e-mail"
+                                                            >
+                                                                <Mail size={14} />
+                                                            </a>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
+
+            {/* Email Modal */}
+            <EmailFormModal
+                isOpen={isEmailModalOpen}
+                onClose={() => setIsEmailModalOpen(false)}
+                modalMode={emailModalMode}
+                currentEmail={currentEmail}
+                cliente={cliente ? { id_cliente: Number(clienteId), ds_nome: cliente.ds_nome } : null}
+                onSuccess={handleModalSuccess}
+                onError={handleModalError}
+            />
         </div>
     );
+}
+
+// Helper function to get email type badge class
+function getEmailTypeBadgeClass(tipo: string): string {
+    switch (tipo) {
+        case 'Principal':
+            return 'bg-blue-100 text-blue-800 border border-blue-200';
+        case 'Financeiro':
+            return 'bg-green-100 text-green-800 border border-green-200';
+        case 'Comercial':
+            return 'bg-purple-100 text-purple-800 border border-purple-200';
+        case 'Suporte':
+            return 'bg-amber-100 text-amber-800 border border-amber-200';
+        case 'NFe':
+            return 'bg-indigo-100 text-indigo-800 border border-indigo-200';
+        default:
+            return 'bg-gray-100 text-gray-800 border border-gray-200';
+    }
 }
 
 // Component for displaying a data field with label and value

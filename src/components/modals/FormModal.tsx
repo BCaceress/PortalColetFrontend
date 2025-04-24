@@ -138,7 +138,7 @@ export function FormModal({
                     </div>
 
                     {/* Modal body */}
-                    <div className="px-6 py-5">
+                    <div className="px-6 py-5 text-gray-900">
                         {children}
                     </div>
                 </div>

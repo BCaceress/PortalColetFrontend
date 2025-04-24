@@ -1191,16 +1191,26 @@ export default function CadastroCliente() {
                                 <label htmlFor="tm_minimo_horas" className="text-sm font-medium text-gray-700 mb-1 block">
                                     Mínimo de Horas
                                 </label>
-                                <input
-                                    type="time"
+                                <select
                                     id="tm_minimo_horas"
                                     name="tm_minimo_horas"
                                     value={formData.tm_minimo_horas || ''}
-                                    onChange={handleTimeChange} // Use the new handler
+                                    onChange={handleChange}
                                     disabled={isSubmitting}
-                                    className={getInputClasses('tm_minimo_horas')}
-                                    placeholder="00:00"
-                                />
+                                    className={getSelectClasses('tm_minimo_horas')}
+                                >
+                                    <option value="">Selecione</option>
+                                    {[...Array(25)].map((_, i) => (
+                                        <option key={i} value={`${i.toString().padStart(2, '0')}:00`}>
+                                            {i} {i === 1 ? 'hora' : 'horas'}
+                                        </option>
+                                    ))}
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                    </svg>
+                                </div>
                             </div>
 
 

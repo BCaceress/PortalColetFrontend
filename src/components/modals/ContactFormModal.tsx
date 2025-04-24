@@ -251,8 +251,11 @@ export function ContactFormModal({
                 await api.post('/contatos', payload);
                 onSuccess?.('Contato criado com sucesso!');
             } else if (modalMode === 'edit') {
+                if (!currentContact?.id_contato) {
+                    throw new Error('ID do contato não encontrado');
+                }
                 // Update existing contact using PATCH instead of PUT
-                await api.patch(`/contatos/${currentContact?.id_contato}`, formData);
+                await api.patch(`/contatos/${currentContact.id_contato}`, formData);
                 onSuccess?.('Contato atualizado com sucesso!');
             }
 
@@ -300,9 +303,9 @@ export function ContactFormModal({
         if (formErrors[fieldName]) {
             return `${baseClasses} border-red-300 text-red-900 placeholder-red-300 focus:ring-red-500 focus:border-red-500`;
         } else if (modalMode === 'edit') {
-            return `${baseClasses} border-gray-300 text-gray-700 placeholder-gray-400 focus:ring-amber-500 focus:border-amber-500`;
+            return `${baseClasses} border-gray-300 text-gray-800 placeholder-gray-500 focus:ring-amber-500 focus:border-amber-500`;
         } else {
-            return `${baseClasses} border-gray-300 text-gray-700 placeholder-gray-400 focus:ring-emerald-500 focus:border-emerald-500`;
+            return `${baseClasses} border-gray-300 text-gray-800 placeholder-gray-500 focus:ring-emerald-500 focus:border-emerald-500`;
         }
     };
 
@@ -319,7 +322,7 @@ export function ContactFormModal({
         }
     };
 
-    // Modified renderFormField function to support adding an icon/element inside the input
+    // Modified renderFormField function to fix the TypeScript error
     const renderFormField = (
         label: string,
         name: keyof ContatoPayload,
@@ -334,7 +337,8 @@ export function ContactFormModal({
                 {label}
                 {required && <span className="ml-1 text-red-500">*</span>}
                 {modalMode === 'edit' &&
-                    currentContact?.[name] !== undefined &&
+                    currentContact &&  // Add non-null assertion here
+                    currentContact[name] !== undefined &&
                     formData[name] !== currentContact[name as keyof Contato] && (
                         <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
                             Modificado
@@ -368,7 +372,7 @@ export function ContactFormModal({
         </div>
     );
 
-    // Renders a textarea field
+    // Same fix for renderTextareaField
     const renderTextareaField = (
         label: string,
         name: keyof ContatoPayload,
@@ -379,7 +383,8 @@ export function ContactFormModal({
             <label htmlFor={name} className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
                 {label}
                 {modalMode === 'edit' &&
-                    currentContact?.[name] !== undefined &&
+                    currentContact &&  // Add non-null assertion here
+                    currentContact[name] !== undefined &&
                     formData[name] !== currentContact[name as keyof Contato] && (
                         <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">
                             Modificado
@@ -503,7 +508,7 @@ export function ContactFormModal({
                         className={`${getInputClasses('id_clientes')} text-left flex items-center justify-between`}
                         disabled={isSubmitting || clientsLoading}
                     >
-                        <span className="block truncate text-gray-500">
+                        <span className="block truncate text-gray-700">
                             {clientsLoading ? 'Carregando clientes...' : 'Selecione os clientes'}
                         </span>
                         <ChevronsUpDown size={18} className="ml-2 opacity-50" />
