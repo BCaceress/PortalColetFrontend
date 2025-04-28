@@ -525,7 +525,7 @@ export default function Clientes() {
     }
 
     return (
-        <div className="p-1 sm:p-5 max-w-7xl mx-auto">
+        <div className="p-1 sm:p-5 max-w-8xl mx-auto w-full transition-all duration-300 relative">
             {/* Page header with title and action button */}
             <PageHeader
                 title="Clientes"

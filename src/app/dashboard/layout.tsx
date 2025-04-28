@@ -73,6 +73,7 @@ export default function DashboardLayout({
                         overflow-auto h-[calc(100vh-64px)] w-full
                         ${collapsed ? 'lg:ml-0 pl-0' : 'lg:ml-0 pl-0'}
                         ${isFullscreen ? 'ml-0' : ''}
+
                     `}
                 >
                     <div className="pl-0 sm:pl-0">
