@@ -97,18 +97,24 @@ export interface ViaCEPResponse {
  * @returns Promessa com os dados do endereço ou erro
  */
 export const searchAddressByCEP = async (cep: string): Promise<ViaCEPResponse> => {
+    // Clean CEP by removing any non-digit characters
     const cleanCEP = cep.replace(/\D/g, '');
 
-    if (cleanCEP.length !== 8) {
-        throw new Error('CEP deve conter 8 dígitos');
+    try {
+        // Make the request to ViaCEP API
+        const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`);
+
+        // Parse the response
+        const data = await response.json();
+
+        // Check if the API returned an error
+        if (data.erro) {
+            throw new Error('CEP não encontrado');
+        }
+
+        return data;
+    } catch (error) {
+        console.error('Erro ao buscar CEP:', error);
+        throw error;
     }
-
-    const response = await fetch(`https://viacep.com.br/ws/${cleanCEP}/json/`);
-    const data = await response.json();
-
-    if (data.erro) {
-        throw new Error('CEP não encontrado');
-    }
-
-    return data;
 };

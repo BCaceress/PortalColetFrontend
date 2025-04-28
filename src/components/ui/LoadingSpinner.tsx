@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useState } from "react";
 
 type LoadingSize = "small" | "medium" | "large";
 type LoadingColor = "primary" | "secondary" | "white" | "gray";
@@ -23,6 +23,14 @@ export const LoadingSpinner = forwardRef<HTMLDivElement, LoadingSpinnerProps>(({
     showText = true,
     className = "",
 }, ref) => {
+    // Add client-side only flag
+    const [isMounted, setIsMounted] = useState(false);
+
+    // Only run animations after component mounts on client
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
     // Size mappings
     const sizeMap = {
         small: "h-8 w-8",
@@ -62,6 +70,31 @@ export const LoadingSpinner = forwardRef<HTMLDivElement, LoadingSpinnerProps>(({
     const containerClasses = fullScreen
         ? "min-h-screen flex items-center justify-center bg-[#F3F4F6]"
         : "flex items-center justify-center py-8";
+
+    // Use a simpler static spinner for server rendering
+    if (!isMounted) {
+        return (
+            <div className={`${containerClasses} ${className}`} ref={ref}>
+                <div className="flex flex-col items-center">
+                    <div className={`relative ${sizeMap[size]}`}>
+                        {/* Static spinner for non-client rendering */}
+                        <div className={`absolute inset-0 border-4 border-gray-200 border-t-[#09A08D] rounded-full`} />
+
+                        {/* Static center dot */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className={`w-2 h-2 ${colorMap[color].dot} rounded-full`} />
+                        </div>
+                    </div>
+
+                    {showText && (
+                        <p className={`mt-4 font-medium text-lg ${colorMap[color].text}`}>
+                            {text}
+                        </p>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={`${containerClasses} ${className}`} ref={ref}>
@@ -117,3 +150,4 @@ export const LoadingSpinner = forwardRef<HTMLDivElement, LoadingSpinnerProps>(({
 
 // Named export for backward compatibility
 export { LoadingSpinner as Loading };
+

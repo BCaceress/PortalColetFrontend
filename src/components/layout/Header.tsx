@@ -6,6 +6,7 @@ import { Bell, Building2, Calendar, ChevronDown, ChevronLeft, ChevronRight, Expa
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { RoleBadge } from '../ui/RoleBadge';
 
 interface HeaderProps {
     user: User | null;
@@ -46,7 +47,6 @@ export default function Header({
 
     // Função para alternar o menu de configurações
     const toggleSettingsMenu = () => {
-        setShowSettingsMenu(!showSettingsMenu);
         setShowProfileMenu(false);
     };
 
@@ -96,6 +96,24 @@ export default function Header({
             if (document.exitFullscreen) {
                 document.exitFullscreen();
             }
+        }
+    };
+
+    // Helper function to get role badge class
+    const getRoleBadgeClass = (role: string | undefined): string => {
+        switch (role) {
+            case 'Administrador':
+                return 'bg-purple-100 text-purple-800 border border-purple-200';
+            case 'Analista':
+                return 'bg-blue-100 text-blue-800 border border-blue-200';
+            case 'Desenvolvedor':
+                return 'bg-teal-100 text-teal-800 border border-teal-200';
+            case 'Implantador':
+                return 'bg-yellow-100 text-yellow-800 border border-yellow-200';
+            case 'Suporte':
+                return 'bg-red-100 text-red-800 border border-red-200';
+            default:
+                return 'bg-gray-100 text-gray-800 border border-gray-200';
         }
     };
 
@@ -240,6 +258,11 @@ export default function Header({
                                 <div className="px-4 py-3 border-b border-gray-700">
                                     <p className="font-medium text-white">{user?.nome || 'Usuário'}</p>
                                     <p className="text-xs text-gray-300 truncate mt-0.5">{user?.email}</p>
+                                    {user?.funcao && (
+                                        <div className={`mt-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeClass(user.funcao)}`}>
+                                            {user.funcao}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="py-1.5">

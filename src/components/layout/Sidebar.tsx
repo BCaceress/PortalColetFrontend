@@ -1,5 +1,6 @@
 'use client';
 
+import { useAuth } from '@/hooks/useAuth';
 import {
     Book,
     Building2,
@@ -14,6 +15,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useMemo } from 'react';
 
 interface SidebarProps {
     collapsed: boolean;
@@ -22,59 +24,66 @@ interface SidebarProps {
 
 export default function Sidebar({ collapsed, mobileOpen }: SidebarProps) {
     const pathname = usePathname();
+    const { user } = useAuth();
+    const isAdmin = user?.funcao === 'Administrador';
 
-    const menuItems = [
-        {
-            name: 'Dashboard',
-            href: '/dashboard',
-            icon: <LayoutDashboard size={20} className="stroke-current" />
-        },
-        {
-            name: 'Usuários',
-            href: '/dashboard/usuarios',
-            icon: <Users size={20} className="stroke-current" />
-        },
-        {
-            name: 'Clientes',
-            href: '/dashboard/clientes',
-            icon: <Building2 size={20} className="stroke-current" />
-        },
-        {
-            name: 'Contatos',
-            href: '/dashboard/contatos',
-            icon: <User size={20} className="stroke-current" />
-        },
-        {
-            name: 'RATs',
-            href: '/dashboard/rats',
-            icon: <ClipboardList size={20} className="stroke-current" />
-        },
-        {
-            name: 'Agendas',
-            href: '/dashboard/agendas',
-            icon: <Calendar size={20} className="stroke-current" />
-        },
-        {
-            name: 'Relatórios',
-            href: '/dashboard/relatorios',
-            icon: <FileText size={20} className="stroke-current" />
-        },
-        {
-            name: 'Base de Conhecimento',
-            href: '/dashboard/baseConhecimento',
-            icon: <Book size={20} className="stroke-current" />
-        },
-        {
-            name: 'Tickets',
-            href: '/dashboard/chamados',
-            icon: <Headset size={20} className="stroke-current" />
-        },
-        {
-            name: 'Quadros Trello',
-            href: '/dashboard/quadrosTrello',
-            icon: <Trello size={20} className="stroke-current" />
-        },
-    ];
+    const menuItems = useMemo(() => {
+        const items = [
+            {
+                name: 'Dashboard',
+                href: '/dashboard',
+                icon: <LayoutDashboard size={20} className="stroke-current" />
+            },
+
+            ...(isAdmin ? [{
+                name: 'Usuários',
+                href: '/dashboard/usuarios',
+                icon: <Users size={20} className="stroke-current" />
+            }] : []),
+            {
+                name: 'Clientes',
+                href: '/dashboard/clientes',
+                icon: <Building2 size={20} className="stroke-current" />
+            },
+            {
+                name: 'Contatos',
+                href: '/dashboard/contatos',
+                icon: <User size={20} className="stroke-current" />
+            },
+            {
+                name: 'RATs',
+                href: '/dashboard/rats',
+                icon: <ClipboardList size={20} className="stroke-current" />
+            },
+            {
+                name: 'Agendas',
+                href: '/dashboard/agendas',
+                icon: <Calendar size={20} className="stroke-current" />
+            },
+            {
+                name: 'Relatórios',
+                href: '/dashboard/relatorios',
+                icon: <FileText size={20} className="stroke-current" />
+            },
+            {
+                name: 'Base de Conhecimento',
+                href: '/dashboard/baseConhecimento',
+                icon: <Book size={20} className="stroke-current" />
+            },
+            {
+                name: 'Tickets',
+                href: '/dashboard/chamados',
+                icon: <Headset size={20} className="stroke-current" />
+            },
+            {
+                name: 'Quadros Trello',
+                href: '/dashboard/quadrosTrello',
+                icon: <Trello size={20} className="stroke-current" />
+            },
+        ];
+
+        return items;
+    }, [isAdmin]);
 
     // Function to determine if a menu item is active based on current pathname
     const isItemActive = (itemHref: string) => {

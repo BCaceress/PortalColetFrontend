@@ -202,57 +202,76 @@ export const EmailFormModal: React.FC<EmailFormModalProps> = ({
                             leaveFrom="opacity-100 scale-100"
                             leaveTo="opacity-0 scale-95"
                         >
-                            <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
-                                <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                            <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white text-left align-middle shadow-xl transition-all">
+                                <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100">
                                     <Dialog.Title
                                         as="h3"
-                                        className="text-lg font-medium leading-6 text-gray-900 flex items-center"
+                                        className="text-lg font-medium leading-6 text-gray-800 flex items-center"
                                     >
-                                        <AtSign className="mr-2 text-blue-600" size={20} />
+                                        <AtSign className="mr-3 text-teal-500" size={20} />
                                         {modalMode === 'create' ? 'Novo E-mail' : 'Editar E-mail'}
                                     </Dialog.Title>
                                     <button
                                         type="button"
-                                        className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                                        className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1 rounded-full transition-colors duration-200 focus:outline-none"
                                         onClick={onClose}
                                         disabled={isSubmitting}
                                     >
-                                        <X size={20} />
+                                        <X size={18} />
                                     </button>
                                 </div>
 
                                 {cliente && (
-                                    <div className="mt-4 bg-blue-50 border border-blue-100 rounded-md p-3">
-                                        <p className="text-sm text-blue-700">
-                                            <span className="font-medium">Cliente:</span> {cliente.ds_nome}
+                                    <div className="mx-6 mt-4 bg-teal-50 border border-teal-100 rounded-lg p-3 flex items-center">
+                                        <div className="p-1.5 rounded-full bg-teal-100 mr-3">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-teal-600" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4zm3 1h6v4H7V5zm8 8v2h1v1H4v-1h1v-2h-.5a.5.5 0 010-1H6v-1a1 1 0 011-1h.5V9H6a1 1 0 01-1-1V7h7v1a1 1 0 01-1 1h-1v1h.5a1 1 0 011 1v1H13v2h1.5a.5.5 0 010 1H14z" clipRule="evenodd" />
+                                            </svg>
+                                        </div>
+                                        <p className="text-sm text-teal-800 font-medium">
+                                            {cliente.ds_nome}
                                         </p>
                                     </div>
                                 )}
 
-                                <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+                                <form onSubmit={handleSubmit} className="p-6 pt-4 space-y-4">
                                     {/* E-mail Field */}
                                     <div>
-                                        <label htmlFor="ds_email" className="block text-sm font-medium text-gray-700 mb-1">
+                                        <label htmlFor="ds_email" className="block text-sm font-medium text-gray-600 mb-1.5">
                                             E-mail(s) <span className="text-red-500">*</span>
                                         </label>
-                                        <div className="relative">
+                                        <div className="relative group">
                                             <textarea
                                                 id="ds_email"
                                                 name="ds_email"
                                                 value={formData.ds_email}
                                                 onChange={handleChange}
-                                                className={`block w-full rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm px-4 py-2 ${formErrors.ds_email ? 'border-red-300' : 'border-gray-300'} text-gray-800 placeholder-gray-500`}
-                                                placeholder="email1@exemplo.com;email2@exemplo.com;email3@exemplo.com"
+                                                className={`block w-full rounded-lg border ${formErrors.ds_email
+                                                        ? 'border-red-300 focus:border-red-500 focus:ring-1 focus:ring-red-500'
+                                                        : 'border-gray-200 hover:border-gray-300 focus:border-teal-500 focus:ring-1 focus:ring-teal-500'
+                                                    } shadow-sm transition-all duration-200 text-sm px-4 py-3 text-gray-700 placeholder-gray-400 bg-white`}
+                                                placeholder="exemplo@email.com; outro@email.com"
                                                 disabled={isSubmitting || isLoadingEmails}
                                                 required
-                                                rows={4}
+                                                rows={3}
                                             />
+                                            <AtSign size={18} className="absolute right-3 top-3 text-gray-400 group-hover:text-teal-500 transition-colors duration-200" />
                                         </div>
-                                        <p className="mt-1 text-xs text-gray-500">
-                                            Insira múltiplos e-mails separados por ponto e vírgula (;)
-                                        </p>
+                                        <div className="mt-2 flex items-center text-xs">
+                                            <div className="flex items-center justify-center w-4 h-4 rounded-full bg-teal-100 text-teal-600 mr-1.5">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                </svg>
+                                            </div>
+                                            <span className="text-gray-500">Separe múltiplos e-mails com ponto e vírgula (;)</span>
+                                        </div>
                                         {formErrors.ds_email && (
-                                            <p className="mt-1 text-sm text-red-600">{formErrors.ds_email}</p>
+                                            <p className="mt-1.5 text-sm text-red-600 flex items-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                                </svg>
+                                                {formErrors.ds_email}
+                                            </p>
                                         )}
                                     </div>
 
@@ -260,14 +279,17 @@ export const EmailFormModal: React.FC<EmailFormModalProps> = ({
                                         <button
                                             type="button"
                                             onClick={onClose}
-                                            className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                            className="inline-flex items-center justify-center rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-600 shadow-sm hover:bg-gray-50 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 transition-colors duration-200"
                                             disabled={isSubmitting}
                                         >
                                             Cancelar
                                         </button>
                                         <button
                                             type="submit"
-                                            className={`inline-flex justify-center rounded-md border border-transparent ${isSubmitting ? 'bg-blue-400' : 'bg-blue-600 hover:bg-blue-700'} px-4 py-2 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
+                                            className={`inline-flex items-center justify-center rounded-lg ${isSubmitting
+                                                ? 'bg-teal-400 cursor-not-allowed'
+                                                : 'bg-teal-600 hover:bg-teal-700'
+                                                } px-5 py-2.5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 transition-all duration-200`}
                                             disabled={isSubmitting}
                                         >
                                             {isSubmitting ? (
@@ -276,12 +298,12 @@ export const EmailFormModal: React.FC<EmailFormModalProps> = ({
                                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                                     </svg>
-                                                    Salvando...
+                                                    <span>Salvando...</span>
                                                 </>
                                             ) : (
                                                 <>
                                                     <Check size={16} className="mr-2" />
-                                                    {modalMode === 'create' ? 'Adicionar' : 'Salvar'}
+                                                    <span>{modalMode === 'create' ? 'Adicionar' : 'Salvar'}</span>
                                                 </>
                                             )}
                                         </button>

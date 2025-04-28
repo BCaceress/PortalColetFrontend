@@ -1,7 +1,6 @@
 'use client';
 
 import api from '@/services/api';
-import { SHA256 } from 'crypto-js'; // Importando a função de hash SHA256 para criptografar senhas
 import { FileEdit, Info, Loader2, Save, ShieldAlert, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { FormModal } from './FormModal';
@@ -166,10 +165,8 @@ export function UserFormModal({
       // Copiar dados do formulário para não modificar o state diretamente
       const dataToSubmit = { ...formData };
 
-      // Criptografar a senha se ela existir
-      if (dataToSubmit.senha) {
-        dataToSubmit.senha = SHA256(dataToSubmit.senha).toString();
-      }
+      // Removendo a criptografia da senha no frontend
+      // O backend será responsável por criptografar a senha
 
       if (modalMode === 'create') {
         // Create new user - sempre com fl_ativo como true

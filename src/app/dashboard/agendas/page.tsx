@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { ChangeEvent, useEffect, useState } from "react";
 
 // List of available calendars (can be expanded later)
 const calendars = [
@@ -33,8 +33,14 @@ const calendars = [
 
 export default function DesenvolvimentosPage() {
     const [selectedCalendarId, setSelectedCalendarId] = useState(calendars[0].id);
-    const [iframeKey, setIframeKey] = useState(Date.now()); // Add a key state to force iframe refresh
-    const [lastUpdateTime, setLastUpdateTime] = useState(new Date()); // Estado para armazenar a última hora de atualização
+    const [iframeKey, setIframeKey] = useState(0); // Changed from Date.now() to avoid hydration mismatch
+    const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null); // Initialize as null to avoid hydration mismatch
+
+    // Set the initial update time after component mounts on client side
+    useEffect(() => {
+        setLastUpdateTime(new Date());
+        setIframeKey(Date.now()); // Set initial key after component mounts
+    }, []);
 
     const selectedCalendar = calendars.find(calendar => calendar.id === selectedCalendarId) || calendars[0];
 
@@ -57,13 +63,15 @@ export default function DesenvolvimentosPage() {
     };
 
     // Handler for select change
-    const handleSelectChange = (e) => {
+    const handleSelectChange = (e: ChangeEvent<HTMLSelectElement>) => {
         setSelectedCalendarId(e.target.value);
         setLastUpdateTime(new Date()); // Atualiza o horário quando o calendário é alterado
     };
 
-    // Formatar a data e hora para exibição
-    const formatDateTime = (date) => {
+    // Formatar a data e hora para exibição - check if date is null first
+    const formatDateTime = (date: Date | null) => {
+        if (!date) return "..."; // Return placeholder if date isn't set yet
+
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const year = date.getFullYear();
@@ -75,8 +83,6 @@ export default function DesenvolvimentosPage() {
 
     return (
         <div className="flex flex-col h-full bg-gray-50 px-2 py-2 sm:px-3">
-
-
             {/* Container do calendário com padding reduzido */}
             <div className="flex-grow bg-white rounded-md shadow-sm overflow-hidden border border-gray-200">
                 {/* Cabeçalho do calendário redesenhado - mais alto e profissional */}
@@ -154,26 +160,28 @@ export default function DesenvolvimentosPage() {
                     </div>
                 </div>
 
-                {/* Iframe com altura ainda mais aumentada para ocupar mais espaço na tela */}
-                <motion.div
-                    key={selectedCalendarId}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3 }}
-                    className="w-full h-[calc(100vh-140px)]"
-                >
-                    <iframe
-                        key={iframeKey} // Add key prop to force re-render when refresh is clicked
-                        src={selectedCalendar.url}
-                        style={{ border: 0 }}
-                        width="100%"
-                        height="600"
-                        frameBorder="0"
-                        scrolling="no"
-                        title={`Agenda de ${selectedCalendar.name}`}
-                        className="bg-white"
-                    ></iframe>
-                </motion.div>
+                {/* Iframe with client-side rendering */}
+                {lastUpdateTime && ( // Only render iframe after client-side initialization
+                    <motion.div
+                        key={selectedCalendarId}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                        className="w-full h-[calc(100vh-140px)]"
+                    >
+                        <iframe
+                            key={iframeKey} // Add key prop to force re-render when refresh is clicked
+                            src={selectedCalendar.url}
+                            style={{ border: 0 }}
+                            width="100%"
+                            height="600"
+                            frameBorder="0"
+                            scrolling="no"
+                            title={`Agenda de ${selectedCalendar.name}`}
+                            className="bg-white"
+                        ></iframe>
+                    </motion.div>
+                )}
             </div>
         </div>
     );

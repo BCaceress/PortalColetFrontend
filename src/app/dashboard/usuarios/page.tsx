@@ -1,8 +1,10 @@
 'use client';
 
+import { useAuth } from '@/hooks/useAuth';
 import api from '@/services/api';
 import { motion } from 'framer-motion';
 import { Edit, Plus, UserCog } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 // Import our reusable components
@@ -37,13 +39,15 @@ interface UsuarioPayload {
 type ModalMode = 'create' | 'edit' | 'view';
 
 export default function Usuarios() {
+    const { user } = useAuth();
+    const router = useRouter();
     const [usuarios, setUsuarios] = useState<Usuario[]>([]);
     const [filteredUsuarios, setFilteredUsuarios] = useState<Usuario[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [funcaoFilter, setFuncaoFilter] = useState<'todos' | 'Administrador' | 'Analista' | 'Desenvolvedor' | 'Implantador' | 'Suporte'>('todos');
-    const [statusFilter, setStatusFilter] = useState<'todos' | 'ativo' | 'inativo'>('todos');
+    const [statusFilter, setStatusFilter] = useState<'todos' | 'ativo' | 'inativo'>('ativo');
     const [animateItems, setAnimateItems] = useState(false);
 
     // Modal state
@@ -62,9 +66,14 @@ export default function Usuarios() {
         visible: false
     });
 
+    // Verificar se o usuário é administrador e redirecionar se não for
     useEffect(() => {
-        fetchUsuarios();
-    }, []);
+        if (user && user.funcao !== 'Administrador') {
+            router.push('/dashboard');
+        } else {
+            fetchUsuarios();
+        }
+    }, [user, router]);
 
     // Função para buscar os usuários da API
     const fetchUsuarios = async () => {
@@ -72,7 +81,11 @@ export default function Usuarios() {
             setLoading(true);
             const response = await api.get('/usuarios');
             setUsuarios(response.data);
-            setFilteredUsuarios(response.data);
+
+            // Filtra para mostrar apenas usuários ativos inicialmente
+            const activesOnly = response.data.filter(usuario => usuario.fl_ativo);
+            setFilteredUsuarios(activesOnly);
+
             setError(null);
 
             // Trigger animation after data loads
@@ -116,8 +129,8 @@ export default function Usuarios() {
 
     const clearFilters = () => {
         setFuncaoFilter('todos');
-        setStatusFilter('todos');
-        filterUsuarios(searchTerm, 'todos', 'todos');
+        setStatusFilter('ativo');
+        filterUsuarios(searchTerm, 'todos', 'ativo');
     };
 
     const filterUsuarios = (
@@ -180,11 +193,12 @@ export default function Usuarios() {
             type: 'feature' as const,
             onRemove: () => handleFuncaoFilter('todos')
         }] : []),
-        ...(statusFilter !== 'todos' ? [{
+        // Mostrar filtro de status apenas quando for 'inativo' ou 'todos'
+        ...(statusFilter === 'inativo' || statusFilter === 'todos' ? [{
             id: 'status',
-            label: statusFilter === 'ativo' ? 'Ativo' : 'Inativo',
+            label: statusFilter === 'ativo' ? 'Ativo' : statusFilter === 'inativo' ? 'Inativo' : 'Todos',
             type: 'feature' as const,
-            onRemove: () => handleStatusFilter('todos')
+            onRemove: () => handleStatusFilter('ativo')
         }] : [])
     ];
 

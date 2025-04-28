@@ -29,6 +29,11 @@ export function FilterPanel({ filters, onClearFilters }: FilterPanelProps) {
 
     // Calculate active filters count
     const activeFiltersCount = filters.reduce((count, filter) => {
+        // Para o caso específico do filtro de status, não conte 'ativos' como filtro ativo
+        if (filter.name === 'Status' && filter.currentValue === 'ativos') {
+            return count;
+        }
+
         // For toggle filters like 'todos' | 'ativos' | 'inativos', check if not default
         if (filter.type === 'toggle' || filter.type === 'multi-toggle') {
             const defaultOption = filter.options.find(opt => opt.value === filter.currentValue);

@@ -52,7 +52,7 @@ export default function Contatos() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [statusFilter, setStatusFilter] = useState<'todos' | 'ativos' | 'inativos'>('todos');
+    const [statusFilter, setStatusFilter] = useState<'todos' | 'ativos' | 'inativos'>('ativos');
     const [whatsappFilter, setWhatsappFilter] = useState<boolean | null>(null);
     const [clienteFilter, setClienteFilter] = useState<number | null>(null);
     const [clientes, setClientes] = useState<{ id_cliente: number, ds_nome: string }[]>([]);
@@ -85,7 +85,11 @@ export default function Contatos() {
                 setLoading(true);
                 const response = await api.get('/contatos');
                 setContacts(response.data);
-                setFilteredContacts(response.data);
+
+                // Filtra para mostrar apenas contatos ativos inicialmente
+                const activesOnly = response.data.filter(contact => contact.fl_ativo);
+                setFilteredContacts(activesOnly);
+
                 setError(null);
 
                 // Acionamos a animação depois dos dados carregarem
@@ -134,10 +138,10 @@ export default function Contatos() {
     };
 
     const clearFilters = () => {
-        setStatusFilter('todos');
+        setStatusFilter('ativos');
         setWhatsappFilter(null);
         setClienteFilter(null);
-        filterContacts(searchTerm, 'todos', null, null);
+        filterContacts(searchTerm, 'ativos', null, null);
     };
 
     const filterContacts = (term: string, status: 'todos' | 'ativos' | 'inativos', whatsapp: boolean | null, clienteId: number | null) => {
@@ -178,11 +182,12 @@ export default function Contatos() {
 
     // Create active filters array for the ActiveFilters component
     const activeFilters = [
-        ...(statusFilter !== 'todos' ? [{
+        // Mostrar filtro de status apenas quando for 'inativos' ou 'todos'
+        ...(statusFilter === 'inativos' || statusFilter === 'todos' ? [{
             id: 'status',
-            label: statusFilter === 'ativos' ? 'Ativo' : 'Inativo',
+            label: statusFilter === 'ativos' ? 'Ativo' : statusFilter === 'inativos' ? 'Inativo' : 'Todos',
             type: 'status' as const,
-            onRemove: () => handleStatusFilter('todos')
+            onRemove: () => handleStatusFilter('ativos')
         }] : []),
         ...(whatsappFilter !== null ? [{
             id: 'whatsapp',
@@ -261,9 +266,13 @@ export default function Contatos() {
             accessor: (row) => (
                 <div className="flex items-center">
                     <span className="text-gray-800">
-                        <a href={`tel:${row.ds_telefone.replace(/\D/g, '')}`} className="hover:text-blue-600 transition-colors">
-                            {row.ds_telefone}
-                        </a>
+                        {row.ds_telefone ? (
+                            <a href={`tel:${row.ds_telefone.replace(/\D/g, '')}`} className="hover:text-blue-600 transition-colors">
+                                {row.ds_telefone}
+                            </a>
+                        ) : (
+                            <span className="text-gray-400 italic">Não informado</span>
+                        )}
                     </span>
                     {row.fl_whatsapp && (
                         <span
@@ -392,9 +401,13 @@ export default function Contatos() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                     </svg>
                     <div className="flex items-center">
-                        <a href={`tel:${contact.ds_telefone.replace(/\D/g, '')}`} className="text-gray-700">
-                            {contact.ds_telefone}
-                        </a>
+                        {contact.ds_telefone ? (
+                            <a href={`tel:${contact.ds_telefone.replace(/\D/g, '')}`} className="text-gray-700">
+                                {contact.ds_telefone}
+                            </a>
+                        ) : (
+                            <span className="text-gray-400 italic">Não informado</span>
+                        )}
                         {contact.fl_whatsapp && (
                             <span className="ml-2 text-green-500 flex items-center">
                                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
@@ -574,7 +587,10 @@ export default function Contatos() {
                             setLoading(true);
                             const response = await api.get('/contatos');
                             setContacts(response.data);
-                            setFilteredContacts(response.data);
+
+                            // Aplica o filtro atual após atualização dos dados
+                            filterContacts('', statusFilter, whatsappFilter, clienteFilter);
+
                             setError(null);
                         } catch (err) {
                             console.error('Erro ao buscar contatos:', err);
