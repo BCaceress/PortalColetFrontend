@@ -24,6 +24,7 @@ interface Deslocamento {
     nome_usuario: string;
     nome_cliente: string;
     total_km?: number; // Calculado: nr_km_volta - nr_km_ida
+    valor_total?: number; // Calculado: (total_km * nr_valor_km_rodado) + nr_valor_pedagio
 }
 
 interface ReportFilter {
@@ -44,7 +45,8 @@ export default function RelatorioDeslocamento() {
     const [exportLoading, setExportLoading] = useState<boolean>(false);
     const [totalDeslocamento, setTotalDeslocamento] = useState({
         totalKm: 0,
-        totalPedagio: 0
+        totalPedagio: 0,
+        valorTotal: 0 // Novo campo para o valor total
     });
 
     // Buscar usuários para o filtro - apenas implantadores
@@ -122,10 +124,22 @@ export default function RelatorioDeslocamento() {
             const response = await api.post('/rats/relatorio-deslocamento', requestBody);
 
             // Processar dados retornados
-            const dados = response.data.map((item: Deslocamento) => ({
-                ...item,
-                total_km: (item.nr_km_volta || 0) - (item.nr_km_ida || 0)
-            }));
+            const dados = response.data.map((item: Deslocamento) => {
+                // Calcular a diferença de km (total percorrido)
+                const kmPercorrido = (item.nr_km_volta || 0) - (item.nr_km_ida || 0);
+
+                // Calcular o valor do deslocamento (km percorrido * valor do km)
+                const valorKmRodado = kmPercorrido * (item.nr_valor_km_rodado || 0);
+
+                // Calcular o valor total (valor do deslocamento + valor do pedágio)
+                const valorTotal = valorKmRodado + (item.nr_valor_pedagio || 0);
+
+                return {
+                    ...item,
+                    total_km: kmPercorrido,
+                    valor_total: valorTotal
+                };
+            });
 
             setDeslocamentos(dados);
 
@@ -136,9 +150,14 @@ export default function RelatorioDeslocamento() {
             const pedagioTotal = dados.reduce((acc: number, item: Deslocamento) =>
                 acc + (item.nr_valor_pedagio || 0), 0);
 
+            // Somar os valores totais de cada RAT para obter o valor total geral
+            const valorTotal = dados.reduce((acc: number, item: Deslocamento) =>
+                acc + (item.valor_total || 0), 0);
+
             setTotalDeslocamento({
                 totalKm: kmTotal,
-                totalPedagio: pedagioTotal
+                totalPedagio: pedagioTotal,
+                valorTotal: valorTotal
             });
 
             // Animar a tabela
@@ -269,6 +288,13 @@ export default function RelatorioDeslocamento() {
             cellRenderer: (value) => (
                 <span className="text-gray-700">{formatMoeda(value)}</span>
             )
+        },
+        {
+            header: 'Valor Total',
+            accessor: 'valor_total',
+            cellRenderer: (value) => (
+                <span className="font-medium text-gray-800">{formatMoeda(value)}</span>
+            )
         }
     ];
 
@@ -300,7 +326,7 @@ export default function RelatorioDeslocamento() {
                             <select
                                 value={usuarioSelecionado}
                                 onChange={(e) => setUsuarioSelecionado(e.target.value)}
-                                className="block w-full pl-10 pr-3 py-2 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-[#09A08D] focus:border-[#09A08D] sm:text-sm"
+                                className="block w-full pl-10 pr-3 py-2 text-base text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-[#09A08D] focus:border-[#09A08D] sm:text-sm"
                             >
                                 <option value="">Todos os implantadores</option>
                                 {usuarios.map((user) => (
@@ -323,7 +349,7 @@ export default function RelatorioDeslocamento() {
                                 type="date"
                                 value={dataInicio}
                                 onChange={(e) => setDataInicio(e.target.value)}
-                                className="block w-full pl-10 pr-3 py-2 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-[#09A08D] focus:border-[#09A08D] sm:text-sm"
+                                className="block w-full pl-10 pr-3 py-2 text-base text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-[#09A08D] focus:border-[#09A08D] sm:text-sm"
                                 required
                             />
                         </div>
@@ -340,7 +366,7 @@ export default function RelatorioDeslocamento() {
                                 type="date"
                                 value={dataFim}
                                 onChange={(e) => setDataFim(e.target.value)}
-                                className="block w-full pl-10 pr-3 py-2 text-base border border-gray-300 rounded-md focus:outline-none focus:ring-[#09A08D] focus:border-[#09A08D] sm:text-sm"
+                                className="block w-full pl-10 pr-3 py-2 text-base text-gray-900 border border-gray-300 rounded-md focus:outline-none focus:ring-[#09A08D] focus:border-[#09A08D] sm:text-sm"
                                 required
                             />
                         </div>
@@ -385,7 +411,7 @@ export default function RelatorioDeslocamento() {
                         <div className="p-5 border-b border-gray-100">
                             <h3 className="text-lg font-medium text-gray-800 mb-3">Resumo de Deslocamentos</h3>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 <div className="bg-gray-50 rounded-lg p-4 flex items-center">
                                     <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-4">
                                         <Car size={24} className="text-blue-600" />
@@ -404,6 +430,18 @@ export default function RelatorioDeslocamento() {
                                         <p className="text-sm text-gray-500">Total em Pedágios</p>
                                         <p className="text-xl font-semibold text-gray-800">
                                             {formatMoeda(totalDeslocamento.totalPedagio)}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-50 rounded-lg p-4 flex items-center">
+                                    <div className="w-12 h-12 rounded-full bg-yellow-100 flex items-center justify-center mr-4">
+                                        <DollarSign size={24} className="text-yellow-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500">Valor Total</p>
+                                        <p className="text-xl font-semibold text-gray-800">
+                                            {formatMoeda(totalDeslocamento.valorTotal)}
                                         </p>
                                     </div>
                                 </div>
