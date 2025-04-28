@@ -2,7 +2,7 @@
 
 import api from '@/services/api';
 import { motion } from 'framer-motion';
-import { Building2, Eye, Mail, Plus } from 'lucide-react';
+import { Building2, Eye, MailPlus, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
@@ -407,7 +407,7 @@ export default function Clientes() {
                 className="p-1 text-blue-500 rounded hover:bg-blue-100 transition-colors mr-1"
                 title="Gerenciar E-mails"
             >
-                <Mail size={18} />
+                <MailPlus size={18} />
             </button>
             <button
                 onClick={() => handleViewClientDetails(cliente)}
@@ -500,7 +500,7 @@ export default function Clientes() {
                     whileTap={{ scale: 0.95 }}
                     className="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 flex items-center gap-1"
                 >
-                    <Mail size={14} />
+                    <MailPlus size={14} />
                     E-mails
                 </motion.button>
                 <motion.button

@@ -87,7 +87,7 @@ export default function Contatos() {
                 setContacts(response.data);
 
                 // Filtra para mostrar apenas contatos ativos inicialmente
-                const activesOnly = response.data.filter(contact => contact.fl_ativo);
+                const activesOnly = response.data.filter((contact: Contact) => contact.fl_ativo);
                 setFilteredContacts(activesOnly);
 
                 setError(null);
@@ -185,7 +185,7 @@ export default function Contatos() {
         // Mostrar filtro de status apenas quando for 'inativos' ou 'todos'
         ...(statusFilter === 'inativos' || statusFilter === 'todos' ? [{
             id: 'status',
-            label: statusFilter === 'ativos' ? 'Ativo' : statusFilter === 'inativos' ? 'Inativo' : 'Todos',
+            label: statusFilter === 'todos' ? 'Todos' : 'Inativo',
             type: 'status' as const,
             onRemove: () => handleStatusFilter('ativos')
         }] : []),
@@ -570,12 +570,13 @@ export default function Contatos() {
                 modalMode={modalMode}
                 currentContact={currentContact ? {
                     id_contato: currentContact.id_contato,
-                    nome: currentContact.ds_nome,
-                    email: currentContact.ds_email,
-                    telefone: currentContact.ds_telefone,
-                    empresa: currentContact.clientes?.[0]?.ds_nome || '',
-                    cargo: currentContact.ds_cargo,
-                    fl_ativo: currentContact.fl_ativo
+                    ds_nome: currentContact.ds_nome,
+                    ds_email: currentContact.ds_email,
+                    ds_telefone: currentContact.ds_telefone,
+                    ds_cargo: currentContact.ds_cargo,
+                    fl_ativo: currentContact.fl_ativo,
+                    fl_whatsapp: currentContact.fl_whatsapp,
+                    tx_observacoes: currentContact.tx_observacoes
                 } : null}
                 onSuccess={(message) => {
                     // Mostrar notificação de sucesso (pode ser implementado depois)
@@ -589,7 +590,7 @@ export default function Contatos() {
                             setContacts(response.data);
 
                             // Aplica o filtro atual após atualização dos dados
-                            filterContacts('', statusFilter, whatsappFilter, clienteFilter);
+                            filterContacts(searchTerm, statusFilter, whatsappFilter, clienteFilter);
 
                             setError(null);
                         } catch (err) {
