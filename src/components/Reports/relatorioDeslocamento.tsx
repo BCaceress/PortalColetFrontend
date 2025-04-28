@@ -4,11 +4,11 @@ import { Column, DataTable } from '@/components/ui/DataTable';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { PageHeader } from '@/components/ui/PageHeader';
 import api from '@/services/api';
-import { generateDeslocamentoPDF } from '@/services/pdfService';
+import { PDFExportOptions, generateDeslocamentoPDF } from '@/services/pdfService';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion } from 'framer-motion';
-import { Calendar, Car, DollarSign, File, FileText, User } from 'lucide-react';
+import { Calendar, Car, DollarSign, Download, File, FileText, Loader, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Interface para dados de deslocamento extraídos das RATs
@@ -48,6 +48,7 @@ export default function RelatorioDeslocamento({ isEmbedded = false }: RelatorioD
     const [dataFim, setDataFim] = useState<string>('');
     const [animateItems, setAnimateItems] = useState(false);
     const [exportLoading, setExportLoading] = useState<boolean>(false);
+    const [exportSuccess, setExportSuccess] = useState<boolean>(false);
     const [totalDeslocamento, setTotalDeslocamento] = useState({
         totalKm: 0,
         totalPedagio: 0,
@@ -178,7 +179,7 @@ export default function RelatorioDeslocamento({ isEmbedded = false }: RelatorioD
     };
 
     // Função para exportar relatório em PDF
-    const exportarRelatorioPDF = async () => {
+    const exportarRelatorioPDF = async (downloadDirectly: boolean = false) => {
         if (!dataInicio || !dataFim) {
             setError('É necessário informar um período de datas para exportar');
             return;
@@ -186,8 +187,17 @@ export default function RelatorioDeslocamento({ isEmbedded = false }: RelatorioD
 
         try {
             setExportLoading(true);
+            setError(null);
+            setExportSuccess(false);
 
-            // Preparar dados para o PDF no formato correto
+            // Preparar o nome do arquivo
+            const periodoStr = `${formatDate(dataInicio)}_a_${formatDate(dataFim)}`.replace(/\//g, '-');
+            const usuarioStr = usuarioSelecionado ?
+                `_${usuarios.find(u => u.id_usuario === Number(usuarioSelecionado))?.nome || 'usuario'}` : '';
+
+            const filename = `relatorio_deslocamento${usuarioStr}_${periodoStr}.pdf`;
+
+            // Preparar filtro para o serviço PDF com opções avançadas
             const filtro: ReportFilter = {
                 dt_inicio: dataInicio,
                 dt_fim: dataFim
@@ -198,28 +208,23 @@ export default function RelatorioDeslocamento({ isEmbedded = false }: RelatorioD
                 filtro.id_usuario = Number(usuarioSelecionado);
             }
 
-            // Usando o serviço para gerar o PDF
-            const blobData = await generateDeslocamentoPDF(filtro);
+            // Configurar opções de exportação
+            const options: PDFExportOptions = {
+                filename,
+                shouldDownload: downloadDirectly,
+                openInNewTab: !downloadDirectly // Abrir em nova aba apenas se não for download direto
+            };
 
-            // Criar um URL para o blob e iniciar o download
-            const url = window.URL.createObjectURL(blobData);
-            const link = document.createElement('a');
-            link.href = url;
+            // Usando o serviço para gerar o PDF com as opções configuradas
+            await generateDeslocamentoPDF(filtro, options);
 
-            // Nome do arquivo baseado no período e usuário
-            const nomeUsuario = usuarioSelecionado
-                ? usuarios.find(u => u.id_usuario === Number(usuarioSelecionado))?.nome || 'todos'
-                : 'todos';
-
-            link.setAttribute('download', `relatorio-deslocamento-${nomeUsuario}-${dataInicio}-${dataFim}.pdf`);
-
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
+            // Mostrar feedback de sucesso temporário
+            setExportSuccess(true);
+            setTimeout(() => setExportSuccess(false), 3000);
 
         } catch (error) {
             console.error('Erro ao exportar relatório:', error);
-            setError('Não foi possível exportar o relatório em PDF');
+            setError('Não foi possível exportar o relatório em PDF. Verifique sua conexão e tente novamente.');
         } finally {
             setExportLoading(false);
         }
@@ -390,15 +395,41 @@ export default function RelatorioDeslocamento({ isEmbedded = false }: RelatorioD
                     </button>
 
                     {deslocamentos.length > 0 && (
-                        <div className="flex gap-2 justify-end">
+                        <div className="flex flex-wrap gap-2 justify-end">
+                            {/* Botão para visualizar PDF em nova aba */}
                             <button
-                                onClick={exportarRelatorioPDF}
+                                onClick={() => exportarRelatorioPDF(false)}
                                 disabled={exportLoading}
                                 className="bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded-lg flex items-center justify-center gap-1 hover:bg-gray-50 disabled:opacity-70 transition-all"
                             >
-                                <File size={16} className="text-red-500" />
-                                <span>Exportar PDF</span>
+                                {exportLoading ? (
+                                    <Loader size={16} className="animate-spin" />
+                                ) : (
+                                    <File size={16} className="text-red-500" />
+                                )}
+                                <span>Visualizar PDF</span>
                             </button>
+
+                            {/* Botão para download direto do PDF */}
+                            <button
+                                onClick={() => exportarRelatorioPDF(true)}
+                                disabled={exportLoading}
+                                className="bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded-lg flex items-center justify-center gap-1 hover:bg-gray-50 disabled:opacity-70 transition-all"
+                            >
+                                {exportLoading ? (
+                                    <Loader size={16} className="animate-spin" />
+                                ) : (
+                                    <Download size={16} className="text-blue-500" />
+                                )}
+                                <span>Baixar PDF</span>
+                            </button>
+
+                            {/* Feedback de sucesso */}
+                            {exportSuccess && (
+                                <span className="text-green-500 flex items-center gap-1 px-2">
+                                    PDF gerado com sucesso!
+                                </span>
+                            )}
                         </div>
                     )}
                 </div>
