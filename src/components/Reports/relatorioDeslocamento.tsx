@@ -52,7 +52,8 @@ export default function RelatorioDeslocamento({ isEmbedded = false }: RelatorioD
     const [totalDeslocamento, setTotalDeslocamento] = useState({
         totalKm: 0,
         totalPedagio: 0,
-        valorTotal: 0 // Novo campo para o valor total
+        valorTotal: 0, // Novo campo para o valor total
+        avgValorKm: 0 // Novo campo para o valor médio do km rodado
     });
 
     // Buscar usuários para o filtro - apenas implantadores
@@ -160,10 +161,16 @@ export default function RelatorioDeslocamento({ isEmbedded = false }: RelatorioD
             const valorTotal = dados.reduce((acc: number, item: Deslocamento) =>
                 acc + (item.valor_total || 0), 0);
 
+            // Calcular o valor médio do km rodado (se houver dados)
+            const avgValorKm = dados.length > 0
+                ? dados.reduce((sum, item) => sum + (item.nr_valor_km_rodado || 0), 0) / dados.length
+                : 0;
+
             setTotalDeslocamento({
                 totalKm: kmTotal,
                 totalPedagio: pedagioTotal,
-                valorTotal: valorTotal
+                valorTotal: valorTotal,
+                avgValorKm: avgValorKm
             });
 
             // Animar a tabela
@@ -283,6 +290,13 @@ export default function RelatorioDeslocamento({ isEmbedded = false }: RelatorioD
             accessor: 'total_km',
             cellRenderer: (value) => (
                 <span className="font-medium text-gray-800">{value || 0} km</span>
+            )
+        },
+        {
+            header: 'Valor KM',
+            accessor: 'nr_valor_km_rodado',
+            cellRenderer: (value) => (
+                <span className="text-gray-700">{formatMoeda(value)}</span>
             )
         },
         {
@@ -448,7 +462,7 @@ export default function RelatorioDeslocamento({ isEmbedded = false }: RelatorioD
                         <div className="p-5 border-b border-gray-100">
                             <h3 className="text-lg font-medium text-gray-800 mb-3">Resumo de Deslocamentos</h3>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                                 <div className="bg-gray-50 rounded-lg p-4 flex items-center">
                                     <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mr-4">
                                         <Car size={24} className="text-blue-600" />
@@ -479,6 +493,18 @@ export default function RelatorioDeslocamento({ isEmbedded = false }: RelatorioD
                                         <p className="text-sm text-gray-500">Valor Total</p>
                                         <p className="text-xl font-semibold text-gray-800">
                                             {formatMoeda(totalDeslocamento.valorTotal)}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-50 rounded-lg p-4 flex items-center">
+                                    <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mr-4">
+                                        <DollarSign size={24} className="text-purple-600" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm text-gray-500">Valor Médio do KM Rodado</p>
+                                        <p className="text-xl font-semibold text-gray-800">
+                                            {formatMoeda(totalDeslocamento.avgValorKm)}
                                         </p>
                                     </div>
                                 </div>

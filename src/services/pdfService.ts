@@ -70,6 +70,11 @@ export const generateDeslocamentoPDF = async (
         const totalPedagio = dados.reduce((acc, item) => acc + (item.nr_valor_pedagio || 0), 0);
         const valorTotal = dados.reduce((acc, item) => acc + (item.valor_total || 0), 0);
 
+        // Calcular o valor médio do km rodado
+        const avgValorKm = dados.length > 0
+            ? dados.reduce((sum, item) => sum + (item.nr_valor_km_rodado || 0), 0) / dados.length
+            : 0;
+
         // Criar nova instância do PDF
         const doc = new jsPDF('portrait', 'mm', 'a4');
 
@@ -91,7 +96,7 @@ export const generateDeslocamentoPDF = async (
         // Configurar tabela
         const tableColumn = [
             'RAT', 'Data', 'Técnico', 'Cliente', 'KM Ida', 'KM Volta',
-            'Total KM', 'Pedágio', 'Valor Total'
+            'Total KM', 'Valor KM', 'Pedágio', 'Valor Total'
         ];
 
         // Configurar conteúdo da tabela
@@ -103,6 +108,7 @@ export const generateDeslocamentoPDF = async (
             `${item.nr_km_ida || 0} km`,
             `${item.nr_km_volta || 0} km`,
             `${item.total_km || 0} km`,
+            formatCurrency(item.nr_valor_km_rodado),
             formatCurrency(item.nr_valor_pedagio),
             formatCurrency(item.valor_total)
         ]);
