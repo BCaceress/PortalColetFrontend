@@ -1,6 +1,7 @@
 'use client';
 
 import api from '@/services/api';
+import { formatCurrency, parseCurrency } from '@/utils/formatters';
 import { FileEdit, Info, Loader2, Save, ShieldAlert, UserPlus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { FormModal } from './FormModal';
@@ -12,6 +13,7 @@ interface Usuario {
   email: string;
   funcao: string;
   fl_ativo: boolean;
+  nr_valor_km_rodado?: number;
 }
 
 interface UsuarioPayload {
@@ -20,6 +22,7 @@ interface UsuarioPayload {
   funcao: string;
   senha?: string;
   fl_ativo: boolean;
+  nr_valor_km_rodado?: number;
 }
 
 type ModalMode = 'create' | 'edit' | 'view';
@@ -80,7 +83,8 @@ export function UserFormModal({
         nome: currentUser.nome,
         email: currentUser.email,
         funcao: currentUser.funcao,
-        fl_ativo: currentUser.fl_ativo
+        fl_ativo: currentUser.fl_ativo,
+        nr_valor_km_rodado: currentUser.nr_valor_km_rodado || 0
       });
     } else {
       // Reset form for create mode - sempre com fl_ativo como true
@@ -89,7 +93,8 @@ export function UserFormModal({
         email: '',
         funcao: '',
         senha: '',
-        fl_ativo: true
+        fl_ativo: true,
+        nr_valor_km_rodado: 0
       });
     }
 
@@ -315,8 +320,6 @@ export function UserFormModal({
               </div>
             </div>
           </div>
-
-
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -327,7 +330,7 @@ export function UserFormModal({
               <div className="flex items-center justify-between mb-1.5">
                 <label htmlFor="nome" className="flex items-center text-sm font-medium text-gray-700">
                   Nome
-                  {modalMode === 'edit' && currentUser?.nome && formData.nome !== currentUser.nome && (
+                  {modalMode === 'edit' && currentUser?.nome && formData.nome !== currentUser?.nome && (
                     <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Modificado</span>
                   )}
                 </label>
@@ -371,7 +374,7 @@ export function UserFormModal({
             <div className="relative">
               <label htmlFor="funcao" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
                 Função
-                {modalMode === 'edit' && currentUser?.funcao && formData.funcao !== currentUser.funcao && (
+                {modalMode === 'edit' && currentUser?.funcao && formData.funcao !== currentUser?.funcao && (
                   <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Modificado</span>
                 )}
               </label>
@@ -410,7 +413,7 @@ export function UserFormModal({
           <div className="relative">
             <label htmlFor="email" className="flex items-center text-sm font-medium text-gray-700 mb-1.5">
               E-mail
-              {modalMode === 'edit' && currentUser?.email && formData.email !== currentUser.email && (
+              {modalMode === 'edit' && currentUser?.email && formData.email !== currentUser?.email && (
                 <span className="ml-2 text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full">Modificado</span>
               )}
             </label>
@@ -460,6 +463,33 @@ export function UserFormModal({
               </p>
             )}
           </div>
+
+          {/* Valor KM Rodado - apenas para Implantador */}
+          {formData.funcao === 'Implantador' && (
+            <div className="relative">
+              <label htmlFor="nr_valor_km_rodado" className="block text-sm font-medium text-gray-700 mb-1.5">
+                Valor do KM Rodado (R$)
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <span className="text-gray-500 sm:text-sm">R$</span>
+                </div>
+                <input
+                  type="text"
+                  id="nr_valor_km_rodado"
+                  name="nr_valor_km_rodado"
+                  value={formatCurrency(formData.nr_valor_km_rodado || 0)}
+                  onChange={(e) => {
+                    const parsedValue = parseCurrency(e.target.value);
+                    setFormData(prev => ({ ...prev, nr_valor_km_rodado: parsedValue }));
+                  }}
+                  disabled={isSubmitting || modalMode === 'view'}
+                  className={`${getInputClasses('nr_valor_km_rodado')} pl-9`}
+                  placeholder="0,00"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Action buttons */}
           <div className="flex justify-end space-x-3 pt-4 mt-6 border-t border-gray-100">

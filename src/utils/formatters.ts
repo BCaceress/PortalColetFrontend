@@ -75,6 +75,35 @@ export const formatPhoneNumber = (value: string): string => {
 };
 
 /**
+ * Formata um valor numérico como moeda brasileira (R$ 1.500,75)
+ * @param value Valor numérico a ser formatado
+ * @param currency Símbolo da moeda (default: R$)
+ * @returns String formatada com o padrão brasileiro de moeda
+ */
+export const formatCurrency = (value: number, currency: string = 'R$'): string => {
+    const formattedValue = value.toLocaleString('pt-BR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+
+    return `${currency} ${formattedValue}`;
+};
+
+/**
+ * Converte uma string formatada em moeda brasileira para um número
+ * @param value String formatada (ex: "R$ 1.500,75" ou "1.500,75")
+ * @returns Valor numérico (ex: 1500.75) pronto para o backend
+ */
+export const parseCurrency = (value: string): number => {
+    // Remove "R$" e espaços
+    const cleanValue = value.replace(/[R$\s]/g, '').trim();
+    // Remove pontos e substitui vírgula por ponto
+    const formattedValue = cleanValue.replace(/\./g, '').replace(',', '.');
+    // Converte para número
+    return parseFloat(formattedValue) || 0;
+};
+
+/**
  * Interface para o retorno da API ViaCEP
  */
 export interface ViaCEPResponse {
