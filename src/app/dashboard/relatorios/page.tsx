@@ -98,6 +98,16 @@ export default function ReportPage() {
             requiresDateRange: true,
             requiresFilters: [],
         },
+        {
+            id: 7,
+            title: 'Relatório de Deslocamento',
+            description: 'Histórico de deslocamentos registrados nas RATs por usuário e período',
+            category: 'atendimentos',
+            icon: <FileBarChart size={24} className="text-indigo-500" />,
+            availableFormats: ['pdf', 'excel', 'csv'],
+            requiresDateRange: true,
+            requiresFilters: ['usuario'],
+        },
     ];
 
     // Filtered reports based on search and category
