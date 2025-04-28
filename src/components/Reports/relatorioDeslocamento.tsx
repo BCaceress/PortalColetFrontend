@@ -33,7 +33,12 @@ interface ReportFilter {
     dt_fim: string;
 }
 
-export default function RelatorioDeslocamento() {
+// Props para o componente
+interface RelatorioDeslocamentoProps {
+    isEmbedded?: boolean;
+}
+
+export default function RelatorioDeslocamento({ isEmbedded = false }: RelatorioDeslocamentoProps) {
     const [deslocamentos, setDeslocamentos] = useState<Deslocamento[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -300,11 +305,12 @@ export default function RelatorioDeslocamento() {
 
     return (
         <div className="p-1 sm:p-5 max-w-7xl mx-auto">
-            {/* Cabeçalho da página */}
-            <PageHeader
-                title="Relatório de Deslocamento"
-                description="Análise de deslocamentos registrados nas RATs"
-            />
+            {!isEmbedded && (
+                <PageHeader
+                    title="Relatório de Deslocamento"
+                    description="Análise de deslocamentos registrados nas RATs"
+                />
+            )}
 
             {/* Filtros do relatório */}
             <motion.div
