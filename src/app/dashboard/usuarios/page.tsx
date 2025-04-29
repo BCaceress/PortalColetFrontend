@@ -5,7 +5,7 @@ import api from '@/services/api';
 import { motion } from 'framer-motion';
 import { Edit, Plus, UserCog } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // Import our reusable components
 import { UserFormModal } from '@/components/modals/UserFormModal';
@@ -66,11 +66,21 @@ export default function Usuarios() {
         visible: false
     });
 
+    // Usar useRef para garantir que a função só é executada uma vez
+    const fetchExecutedRef = useRef(false);
+
     // Verificar se o usuário é administrador e redirecionar se não for
     useEffect(() => {
+        // Se o usuário não for Administrador, redirecionar
         if (user && user.funcao !== 'Administrador') {
             router.push('/dashboard');
-        } else {
+            return;
+        }
+
+        // Chamar a API apenas uma vez quando o usuário estiver disponível
+        // e se ainda não tiver sido executada
+        if (user && !fetchExecutedRef.current) {
+            fetchExecutedRef.current = true;
             fetchUsuarios();
         }
     }, [user, router]);
@@ -83,7 +93,7 @@ export default function Usuarios() {
             setUsuarios(response.data);
 
             // Filtra para mostrar apenas usuários ativos inicialmente
-            const activesOnly = response.data.filter(usuario => usuario.fl_ativo);
+            const activesOnly = response.data.filter((usuario: Usuario) => usuario.fl_ativo);
             setFilteredUsuarios(activesOnly);
 
             setError(null);
@@ -196,7 +206,7 @@ export default function Usuarios() {
         // Mostrar filtro de status apenas quando for 'inativo' ou 'todos'
         ...(statusFilter === 'inativo' || statusFilter === 'todos' ? [{
             id: 'status',
-            label: statusFilter === 'ativo' ? 'Ativo' : statusFilter === 'inativo' ? 'Inativo' : 'Todos',
+            label: statusFilter === 'inativo' ? 'Inativo' : 'Todos',
             type: 'feature' as const,
             onRemove: () => handleStatusFilter('ativo')
         }] : [])
@@ -481,7 +491,7 @@ export default function Usuarios() {
                     isLoading={loading}
                     error={error}
                     loadingComponent={<LoadingSpinner size="medium" color="primary" text="Carregando..." />}
-                    rowActions={usuarioActions}
+                    rowActions={(usuario: Usuario) => usuarioActions(usuario)}
                     mobileCardRenderer={renderMobileUsuarioCard}
                     animationEnabled={animateItems}
                     emptyState={{
